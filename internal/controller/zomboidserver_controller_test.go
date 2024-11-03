@@ -178,14 +178,33 @@ var _ = Describe("ZomboidServer Controller", func() {
 					Expect(container.Image).To(Equal("hordehost/zomboid-server:" + zomboidServer.Spec.Version))
 				})
 
-				It("should set the correct resource requirements", func() {
+				It("should set the correct resource requirements and set the JVM max heap size", func() {
 					Expect(container.Resources).To(Equal(zomboidServer.Spec.Resources))
+					Expect(container.Env).To(ContainElement(corev1.EnvVar{
+						Name:  "ZOMBOID_JVM_MAX_HEAP",
+						Value: "2048m",
+					}))
 				})
 
 				It("should mount the game data volume", func() {
 					Expect(container.VolumeMounts).To(ContainElement(corev1.VolumeMount{
 						Name:      "game-data",
 						MountPath: "/game-data",
+					}))
+				})
+
+				It("should set a readiness probe", func() {
+					Expect(container.ReadinessProbe).To(Equal(&corev1.Probe{
+						ProbeHandler: corev1.ProbeHandler{
+							Exec: &corev1.ExecAction{
+								Command: []string{"/server/ready"},
+							},
+						},
+						InitialDelaySeconds: 0,
+						PeriodSeconds:       120,
+						TimeoutSeconds:      120,
+						SuccessThreshold:    1,
+						FailureThreshold:    1,
 					}))
 				})
 
