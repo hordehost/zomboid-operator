@@ -193,21 +193,6 @@ var _ = Describe("ZomboidServer Controller", func() {
 					}))
 				})
 
-				It("should set a readiness probe", func() {
-					Expect(container.ReadinessProbe).To(Equal(&corev1.Probe{
-						ProbeHandler: corev1.ProbeHandler{
-							Exec: &corev1.ExecAction{
-								Command: []string{"/server/ready"},
-							},
-						},
-						InitialDelaySeconds: 0,
-						PeriodSeconds:       120,
-						TimeoutSeconds:      120,
-						SuccessThreshold:    1,
-						FailureThreshold:    1,
-					}))
-				})
-
 				It("should set the server name", func() {
 					Expect(container.Env).To(ContainElement(corev1.EnvVar{
 						Name:  "ZOMBOID_SERVER_NAME",
@@ -228,6 +213,46 @@ var _ = Describe("ZomboidServer Controller", func() {
 									Name: "the-admin-secret",
 								},
 								Key: "password",
+							},
+						},
+					}))
+				})
+
+				It("should set a startup probe", func() {
+					Expect(container.StartupProbe).To(Equal(&corev1.Probe{
+						ProbeHandler: corev1.ProbeHandler{
+							Exec: &corev1.ExecAction{
+								Command: []string{"/server/health"},
+							},
+						},
+						InitialDelaySeconds: 0,
+						PeriodSeconds:       2,
+						TimeoutSeconds:      1,
+						SuccessThreshold:    1,
+						FailureThreshold:    60,
+					}))
+				})
+
+				It("should set a liveness probe", func() {
+					Expect(container.LivenessProbe).To(Equal(&corev1.Probe{
+						ProbeHandler: corev1.ProbeHandler{
+							Exec: &corev1.ExecAction{
+								Command: []string{"/server/health"},
+							},
+						},
+						InitialDelaySeconds: 5,
+						PeriodSeconds:       15,
+						TimeoutSeconds:      5,
+						SuccessThreshold:    1,
+						FailureThreshold:    3,
+					}))
+				})
+
+				It("should configure graceful shutdown via RCON", func() {
+					Expect(container.Lifecycle).To(Equal(&corev1.Lifecycle{
+						PreStop: &corev1.LifecycleHandler{
+							Exec: &corev1.ExecAction{
+								Command: []string{"/server/rcon", "quit"},
 							},
 						},
 					}))

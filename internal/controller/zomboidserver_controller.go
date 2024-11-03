@@ -130,17 +130,36 @@ func (r *ZomboidServerReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 									MountPath: "/game-data",
 								},
 							},
-							ReadinessProbe: &corev1.Probe{
+							StartupProbe: &corev1.Probe{
 								ProbeHandler: corev1.ProbeHandler{
 									Exec: &corev1.ExecAction{
-										Command: []string{"/server/ready"},
+										Command: []string{"/server/health"},
 									},
 								},
 								InitialDelaySeconds: 0,
-								PeriodSeconds:       120,
-								TimeoutSeconds:      120,
+								PeriodSeconds:       2,
+								TimeoutSeconds:      1,
 								SuccessThreshold:    1,
-								FailureThreshold:    1,
+								FailureThreshold:    60,
+							},
+							LivenessProbe: &corev1.Probe{
+								ProbeHandler: corev1.ProbeHandler{
+									Exec: &corev1.ExecAction{
+										Command: []string{"/server/health"},
+									},
+								},
+								InitialDelaySeconds: 5,
+								PeriodSeconds:       15,
+								TimeoutSeconds:      5,
+								SuccessThreshold:    1,
+								FailureThreshold:    3,
+							},
+							Lifecycle: &corev1.Lifecycle{
+								PreStop: &corev1.LifecycleHandler{
+									Exec: &corev1.ExecAction{
+										Command: []string{"/server/rcon", "quit"},
+									},
+								},
 							},
 						},
 					},
