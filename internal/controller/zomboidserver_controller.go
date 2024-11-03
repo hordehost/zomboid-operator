@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -30,19 +31,18 @@ type ZomboidServerReconciler struct {
 
 // Reconcile is the main function that reconciles a ZomboidServer resource
 func (r *ZomboidServerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = log.FromContext(ctx)
+	var err error
+
+	logger := log.FromContext(ctx)
 
 	zomboidServer := &zomboidv1.ZomboidServer{}
-	err := r.Get(ctx, req.NamespacedName, zomboidServer)
+	err = r.Get(ctx, req.NamespacedName, zomboidServer)
 	if err != nil {
-		return ctrl.Result{}, client.IgnoreNotFound(err)
-	}
-
-	deployment := &appsv1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      zomboidServer.Name,
-			Namespace: zomboidServer.Namespace,
-		},
+		if errors.IsNotFound(err) {
+			logger.Info("ZomboidServer not found", "name", req.NamespacedName)
+			return ctrl.Result{}, nil
+		}
+		return ctrl.Result{}, err
 	}
 
 	pvc := &corev1.PersistentVolumeClaim{
@@ -65,17 +65,21 @@ func (r *ZomboidServerReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 				},
 			}
 		} else {
-			if pvc.Spec.Resources.Requests == nil {
-				pvc.Spec.Resources.Requests = corev1.ResourceList{}
-			}
 			pvc.Spec.Resources.Requests[corev1.ResourceStorage] = zomboidServer.Spec.Storage.Request
 		}
+
 		return ctrl.SetControllerReference(zomboidServer, pvc, r.Scheme)
 	})
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 
+	deployment := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      zomboidServer.Name,
+			Namespace: zomboidServer.Namespace,
+		},
+	}
 	_, err = controllerutil.CreateOrUpdate(ctx, r.Client, deployment, func() error {
 		deployment.Spec = appsv1.DeploymentSpec{
 			Replicas: ptr.To(int32(1)),
@@ -133,7 +137,7 @@ func (r *ZomboidServerReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 							Name: "game-data",
 							VolumeSource: corev1.VolumeSource{
 								PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-									ClaimName: zomboidServer.Name + "-game-data",
+									ClaimName: pvc.Name,
 								},
 							},
 						},

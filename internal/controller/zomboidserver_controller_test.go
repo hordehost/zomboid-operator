@@ -2,7 +2,6 @@ package controller
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo/v2"
@@ -14,6 +13,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	zomboidv1 "github.com/hordehost/zomboid-operator/api/v1"
@@ -21,58 +21,76 @@ import (
 )
 
 var _ = Describe("ZomboidServer Controller", func() {
+	var (
+		ctx        context.Context
+		reconciler *ZomboidServerReconciler
+	)
+
+	BeforeEach(func() {
+		ctx = context.Background()
+		reconciler = &ZomboidServerReconciler{
+			Client: k8sClient,
+			Scheme: k8sClient.Scheme(),
+		}
+	})
+
 	It("should have the CRD available", func() {
 		crd := &apiextensionsv1.CustomResourceDefinition{}
-		err := k8sClient.Get(context.Background(), types.NamespacedName{
+		Expect(k8sClient.Get(ctx, types.NamespacedName{
 			Name: "zomboidservers.horde.host",
-		}, crd)
-		Expect(err).NotTo(HaveOccurred())
+		}, crd)).To(Succeed())
+
 		Expect(crd.Spec.Names.Kind).To(Equal("ZomboidServer"))
 	})
 
-	Context("When managing ZomboidServer resources", func() {
+	When("managing ZomboidServer resources", func() {
 		var (
-			ctx            context.Context
-			namespace      string
-			zomboidServer  *zomboidv1.ZomboidServer
-			namespacedName types.NamespacedName
-			reconciler     *ZomboidServerReconciler
-			adminSecret    *corev1.Secret
+			zomboidServerName types.NamespacedName
+			zomboidServer     *zomboidv1.ZomboidServer
 		)
 
-		BeforeEach(func() {
-			ctx = context.Background()
-			namespace = fmt.Sprintf("zomboid-test-ns-%s", uuid.New().String())
+		It("should do nothing when the ZomboidServer isn't found", func() {
+			nonExistentName := types.NamespacedName{
+				Name:      "does-not-exist",
+				Namespace: "anyhoo",
+			}
 
-			// Create namespace
-			ns := &corev1.Namespace{
+			result, err := reconciler.Reconcile(ctx, reconcile.Request{
+				NamespacedName: nonExistentName,
+			})
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result).To(Equal(ctrl.Result{}))
+		})
+
+		BeforeEach(func() {
+			namespace := corev1.Namespace{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: namespace,
+					Name: "test-namespace-" + uuid.New().String(),
 				},
 			}
-			Expect(k8sClient.Create(ctx, ns)).To(Succeed())
+			Expect(k8sClient.Create(ctx, &namespace)).To(Succeed())
 
-			// Create admin secret
-			adminSecret = &corev1.Secret{
+			adminSecret := &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-admin-secret",
-					Namespace: namespace,
+					Name:      "the-admin-secret",
+					Namespace: namespace.Name,
 				},
 				StringData: map[string]string{
-					"password": "testpassword",
+					"password": "the-extremely-secure-password",
 				},
 			}
 			Expect(k8sClient.Create(ctx, adminSecret)).To(Succeed())
 
-			namespacedName = types.NamespacedName{
+			zomboidServerName = types.NamespacedName{
 				Name:      "test-server",
-				Namespace: namespace,
+				Namespace: namespace.Name,
 			}
 
 			zomboidServer = &zomboidv1.ZomboidServer{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      namespacedName.Name,
-					Namespace: namespacedName.Namespace,
+					Name:      zomboidServerName.Name,
+					Namespace: zomboidServerName.Namespace,
 				},
 				Spec: zomboidv1.ZomboidServerSpec{
 					Version: "41.78.16",
@@ -106,127 +124,137 @@ var _ = Describe("ZomboidServer Controller", func() {
 				Client: k8sClient,
 				Scheme: k8sClient.Scheme(),
 			}
+
+			Expect(k8sClient.Create(ctx, zomboidServer)).To(Succeed())
+
+			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: zomboidServerName})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result).To(Equal(ctrl.Result{}))
+
+			Expect(k8sClient.Get(ctx, zomboidServerName, zomboidServer)).To(Succeed())
 		})
 
-		Context("Creating a new ZomboidServer", func() {
-			It("should create PVC with correct specifications", func() {
-				Expect(k8sClient.Create(ctx, zomboidServer)).To(Succeed())
+		When("Creating a new ZomboidServer", func() {
+			When("Creating the PersistentVolumeClaim", func() {
+				var pvc *corev1.PersistentVolumeClaim
 
-				result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: namespacedName})
-				Expect(err).NotTo(HaveOccurred())
-				Expect(result).To(Equal(ctrl.Result{}))
-
-				pvc := &corev1.PersistentVolumeClaim{}
-				Eventually(func() error {
-					return k8sClient.Get(ctx, types.NamespacedName{
+				BeforeEach(func() {
+					pvc = &corev1.PersistentVolumeClaim{}
+					Expect(k8sClient.Get(ctx, types.NamespacedName{
 						Name:      zomboidServer.Name + "-game-data",
 						Namespace: zomboidServer.Namespace,
-					}, pvc)
-				}).Should(Succeed())
+					}, pvc)).To(Succeed())
+				})
 
-				Expect(pvc.Spec.Resources.Requests[corev1.ResourceStorage]).To(Equal(zomboidServer.Spec.Storage.Request))
-				Expect(pvc.Spec.AccessModes).To(ContainElement(corev1.ReadWriteOnce))
+				It("should create PVC with correct storage class", func() {
+					Expect(*pvc.Spec.StorageClassName).To(Equal("standard"))
+				})
+
+				It("should create PVC with correct storage size", func() {
+					Expect(pvc.Spec.Resources.Requests[corev1.ResourceStorage]).To(Equal(resource.MustParse("10Gi")))
+				})
+
+				It("should create PVC with correct access mode", func() {
+					Expect(pvc.Spec.AccessModes).To(ConsistOf(corev1.ReadWriteOnce))
+				})
 			})
 
-			It("should create Deployment with correct specifications", func() {
-				Expect(k8sClient.Create(ctx, zomboidServer)).To(Succeed())
+			When("creating the Deployment", func() {
+				var (
+					deployment *appsv1.Deployment
+					container  corev1.Container
+				)
 
-				result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: namespacedName})
-				Expect(err).NotTo(HaveOccurred())
-				Expect(result).To(Equal(ctrl.Result{}))
+				BeforeEach(func() {
+					deployment = &appsv1.Deployment{}
+					Expect(k8sClient.Get(ctx, zomboidServerName, deployment)).To(Succeed())
 
-				deploy := &appsv1.Deployment{}
-				Eventually(func() error {
-					return k8sClient.Get(ctx, namespacedName, deploy)
-				}).Should(Succeed())
+					Expect(deployment.Spec.Template.Spec.Containers).To(HaveLen(1))
+					container = deployment.Spec.Template.Spec.Containers[0]
+					Expect(container.Name).To(Equal("zomboid"))
+				})
 
-				container := deploy.Spec.Template.Spec.Containers[0]
-				Expect(container.Image).To(Equal("hordehost/zomboid-server:" + zomboidServer.Spec.Version))
-				Expect(container.Resources).To(Equal(zomboidServer.Spec.Resources))
+				It("should set the correct container image", func() {
+					Expect(container.Image).To(Equal("hordehost/zomboid-server:" + zomboidServer.Spec.Version))
+				})
 
-				// Verify volume mount
-				Expect(container.VolumeMounts).To(ContainElement(corev1.VolumeMount{
-					Name:      "game-data",
-					MountPath: "/game-data",
-				}))
+				It("should set the correct resource requirements", func() {
+					Expect(container.Resources).To(Equal(zomboidServer.Spec.Resources))
+				})
 
-				// Verify environment variables
-				expectedEnvVars := []corev1.EnvVar{
-					{
+				It("should mount the game data volume", func() {
+					Expect(container.VolumeMounts).To(ContainElement(corev1.VolumeMount{
+						Name:      "game-data",
+						MountPath: "/game-data",
+					}))
+				})
+
+				It("should set the server name", func() {
+					Expect(container.Env).To(ContainElement(corev1.EnvVar{
 						Name:  "ZOMBOID_SERVER_NAME",
 						Value: zomboidServer.Name,
-					},
-					{
+					}))
+				})
+
+				It("should set up the admin user", func() {
+					Expect(container.Env).To(ContainElement(corev1.EnvVar{
 						Name:  "ZOMBOID_SERVER_ADMIN_USERNAME",
-						Value: zomboidServer.Spec.Administrator.Username,
-					},
-					{
+						Value: "admin",
+					}))
+					Expect(container.Env).To(ContainElement(corev1.EnvVar{
 						Name: "ZOMBOID_SERVER_ADMIN_PASSWORD",
 						ValueFrom: &corev1.EnvVarSource{
-							SecretKeyRef: &zomboidServer.Spec.Administrator.Password,
+							SecretKeyRef: &corev1.SecretKeySelector{
+								LocalObjectReference: corev1.LocalObjectReference{
+									Name: "the-admin-secret",
+								},
+								Key: "password",
+							},
 						},
-					},
-				}
-				for _, envVar := range expectedEnvVars {
-					Expect(container.Env).To(ContainElement(envVar))
-				}
+					}))
+				})
 			})
 		})
 
 		Context("Updating an existing ZomboidServer", func() {
 			BeforeEach(func() {
-				Expect(k8sClient.Create(ctx, zomboidServer)).To(Succeed())
-				_, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: namespacedName})
-				Expect(err).NotTo(HaveOccurred())
+				Expect(k8sClient.Get(ctx, zomboidServerName, zomboidServer)).To(Succeed())
 			})
 
 			It("should update Deployment when resources are changed", func() {
-				// Update the ZomboidServer resource requirements
-				Eventually(func() error {
-					if err := k8sClient.Get(ctx, namespacedName, zomboidServer); err != nil {
-						return err
-					}
-					zomboidServer.Spec.Resources.Limits[corev1.ResourceMemory] = resource.MustParse("4Gi")
-					zomboidServer.Spec.Resources.Requests[corev1.ResourceMemory] = resource.MustParse("4Gi")
-					return k8sClient.Update(ctx, zomboidServer)
-				}).Should(Succeed())
+				zomboidServer.Spec.Resources.Limits[corev1.ResourceMemory] = resource.MustParse("4Gi")
+				zomboidServer.Spec.Resources.Requests[corev1.ResourceMemory] = resource.MustParse("4Gi")
 
-				// Reconcile the changes
-				result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: namespacedName})
-				Expect(err).NotTo(HaveOccurred())
-				Expect(result).To(Equal(ctrl.Result{}))
+				updateAndReconcile(ctx, k8sClient, reconciler, zomboidServer)
 
-				// Verify the deployment was updated
-				deploy := &appsv1.Deployment{}
-				Eventually(func() resource.Quantity {
-					Expect(k8sClient.Get(ctx, namespacedName, deploy)).To(Succeed())
-					return deploy.Spec.Template.Spec.Containers[0].Resources.Limits[corev1.ResourceMemory]
-				}).Should(Equal(resource.MustParse("4Gi")))
+				deployment := &appsv1.Deployment{}
+				Expect(k8sClient.Get(ctx, zomboidServerName, deployment)).To(Succeed())
+
+				container := deployment.Spec.Template.Spec.Containers[0]
+				Expect(container.Resources.Limits[corev1.ResourceMemory]).To(Equal(resource.MustParse("4Gi")))
 			})
 
 			It("should update Deployment when version is changed", func() {
-				// Update the ZomboidServer version
-				Eventually(func() error {
-					if err := k8sClient.Get(ctx, namespacedName, zomboidServer); err != nil {
-						return err
-					}
-					zomboidServer.Spec.Version = "41.78.17"
-					return k8sClient.Update(ctx, zomboidServer)
-				}).Should(Succeed())
+				zomboidServer.Spec.Version = "41.78.17"
 
-				// Reconcile the changes
-				result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: namespacedName})
-				Expect(err).NotTo(HaveOccurred())
-				Expect(result).To(Equal(ctrl.Result{}))
+				updateAndReconcile(ctx, k8sClient, reconciler, zomboidServer)
 
-				// Verify the deployment was updated
-				deploy := &appsv1.Deployment{}
-				Eventually(func() string {
-					Expect(k8sClient.Get(ctx, namespacedName, deploy)).To(Succeed())
-					return deploy.Spec.Template.Spec.Containers[0].Image
-				}).Should(Equal("hordehost/zomboid-server:41.78.17"))
+				deployment := &appsv1.Deployment{}
+				Expect(k8sClient.Get(ctx, zomboidServerName, deployment)).To(Succeed())
+
+				container := deployment.Spec.Template.Spec.Containers[0]
+				Expect(container.Image).To(Equal("hordehost/zomboid-server:41.78.17"))
 			})
-
 		})
 	})
 })
+
+func updateAndReconcile(ctx context.Context, k8sClient client.Client, reconciler *ZomboidServerReconciler, obj *zomboidv1.ZomboidServer) {
+	Expect(k8sClient.Update(ctx, obj)).To(Succeed())
+	result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{
+		Name:      obj.Name,
+		Namespace: obj.Namespace,
+	}})
+	Expect(err).NotTo(HaveOccurred())
+	Expect(result).To(Equal(ctrl.Result{}))
+}
