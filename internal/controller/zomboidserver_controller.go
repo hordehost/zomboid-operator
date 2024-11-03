@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -45,6 +46,12 @@ func (r *ZomboidServerReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{}, err
 	}
 
+	defer func() {
+		if err := r.Status().Update(ctx, zomboidServer); err != nil {
+			logger.Error(err, "Failed to update ZomboidServer status")
+		}
+	}()
+
 	pvc := &corev1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      zomboidServer.Name + "-game-data",
@@ -71,6 +78,12 @@ func (r *ZomboidServerReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.SetControllerReference(zomboidServer, pvc, r.Scheme)
 	})
 	if err != nil {
+		meta.SetStatusCondition(&zomboidServer.Status.Conditions, metav1.Condition{
+			Type:    zomboidv1.TypeInfrastructureReady,
+			Status:  metav1.ConditionFalse,
+			Reason:  zomboidv1.ReasonMissingPVC,
+			Message: fmt.Sprintf("Failed to create or update PVC: %v", err),
+		})
 		return ctrl.Result{}, err
 	}
 
@@ -180,7 +193,41 @@ func (r *ZomboidServerReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.SetControllerReference(zomboidServer, deployment, r.Scheme)
 	})
 	if err != nil {
+		meta.SetStatusCondition(&zomboidServer.Status.Conditions, metav1.Condition{
+			Type:    zomboidv1.TypeInfrastructureReady,
+			Status:  metav1.ConditionFalse,
+			Reason:  zomboidv1.ReasonMissingDeployment,
+			Message: fmt.Sprintf("Failed to create or update Deployment: %v", err),
+		})
 		return ctrl.Result{}, err
+	}
+
+	meta.SetStatusCondition(&zomboidServer.Status.Conditions, metav1.Condition{
+		Type:               zomboidv1.TypeInfrastructureReady,
+		ObservedGeneration: zomboidServer.Generation,
+		Status:             metav1.ConditionTrue,
+		Reason:             zomboidv1.ReasonInfrastructureReady,
+		Message:            "All required infrastructure components are ready",
+	})
+
+	zomboidServer.Status.Ready = deployment != nil && deployment.Status.ReadyReplicas == 1
+
+	if !zomboidServer.Status.Ready {
+		meta.SetStatusCondition(&zomboidServer.Status.Conditions, metav1.Condition{
+			Type:               zomboidv1.TypeReadyForPlayers,
+			ObservedGeneration: zomboidServer.Generation,
+			Status:             metav1.ConditionFalse,
+			Reason:             zomboidv1.ReasonServerStarting,
+			Message:            "Server is starting up",
+		})
+	} else {
+		meta.SetStatusCondition(&zomboidServer.Status.Conditions, metav1.Condition{
+			Type:               zomboidv1.TypeReadyForPlayers,
+			ObservedGeneration: zomboidServer.Generation,
+			Status:             metav1.ConditionTrue,
+			Reason:             zomboidv1.ReasonServerReady,
+			Message:            "Server is ready to accept players",
+		})
 	}
 
 	return ctrl.Result{}, nil
@@ -191,5 +238,7 @@ func (r *ZomboidServerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&zomboidv1.ZomboidServer{}).
 		Named("zomboidserver").
+		Owns(&corev1.PersistentVolumeClaim{}).
+		Owns(&appsv1.Deployment{}).
 		Complete(r)
 }

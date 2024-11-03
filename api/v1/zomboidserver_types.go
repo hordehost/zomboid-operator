@@ -43,9 +43,35 @@ type Administrator struct {
 
 // ZomboidServerStatus defines the observed state of ZomboidServer.
 type ZomboidServerStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	// Ready indicates whether the server is ready to accept players
+	Ready bool `json:"ready"`
+
+	// Conditions represent the latest available observations of the ZomboidServer's current state.
+	// +optional
+	// +patchMergeKey=type
+	// +patchStrategy=merge
+	// +listType=map
+	// +listMapKey=type
+	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
 }
+
+// Condition Types
+const (
+	// TypeReadyForPlayers indicates whether the ZomboidServer is ready to accept players
+	TypeReadyForPlayers = "ReadyForPlayers"
+	// TypeInfrastructureReady indicates whether all required infrastructure components exist
+	TypeInfrastructureReady = "InfrastructureReady"
+)
+
+// Condition Reasons
+const (
+	ReasonServerStarting = "ServerStarting"
+	ReasonServerReady    = "ServerReady"
+
+	ReasonInfrastructureReady = "InfrastructureReady"
+	ReasonMissingPVC          = "MissingPVC"
+	ReasonMissingDeployment   = "MissingDeployment"
+)
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
