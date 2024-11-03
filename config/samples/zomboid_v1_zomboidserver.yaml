@@ -1,10 +1,11 @@
 apiVersion: v1
 kind: Secret
 metadata:
-  name: zomboid-admin
+  name: zomboid-passwords
 type: Opaque
 stringData:
-  password: "changeme"
+  admin-password: "tread with care"
+  server-password: "let me in"
 ---
 apiVersion: horde.host/v1
 kind: ZomboidServer
@@ -12,11 +13,6 @@ metadata:
   name: zomboidserver-sample
 spec:
   version: "41.78.16"
-  administrator:
-    username: "admin"
-    password:
-      name: zomboid-admin
-      key: password
   resources:
     requests:
       memory: "2Gi"
@@ -26,3 +22,11 @@ spec:
       cpu: "1"
   storage:
     request: "10Gi"
+  administrator:
+    username: "admin"
+    password:
+      name: zomboid-passwords
+      key: admin-password
+  password:
+    name: zomboid-passwords
+    key: server-password

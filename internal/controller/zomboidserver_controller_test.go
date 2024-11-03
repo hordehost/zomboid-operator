@@ -82,6 +82,17 @@ var _ = Describe("ZomboidServer Controller", func() {
 			}
 			Expect(k8sClient.Create(ctx, adminSecret)).To(Succeed())
 
+			serverSecret := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "server-secret",
+					Namespace: namespace.Name,
+				},
+				StringData: map[string]string{
+					"password": "server-password",
+				},
+			}
+			Expect(k8sClient.Create(ctx, serverSecret)).To(Succeed())
+
 			zomboidServerName = types.NamespacedName{
 				Name:      "test-server",
 				Namespace: namespace.Name,
@@ -116,6 +127,12 @@ var _ = Describe("ZomboidServer Controller", func() {
 							},
 							Key: "password",
 						},
+					},
+					Password: &corev1.SecretKeySelector{
+						LocalObjectReference: corev1.LocalObjectReference{
+							Name: serverSecret.Name,
+						},
+						Key: "password",
 					},
 				},
 			}
@@ -256,6 +273,33 @@ var _ = Describe("ZomboidServer Controller", func() {
 							},
 						},
 					}))
+				})
+
+				It("should conditionally set the server password", func() {
+					// First verify password is set when Spec.Password is configured
+					Expect(container.Env).To(ContainElement(corev1.EnvVar{
+						Name: "ZOMBOID_SERVER_PASSWORD",
+						ValueFrom: &corev1.EnvVarSource{
+							SecretKeyRef: &corev1.SecretKeySelector{
+								LocalObjectReference: corev1.LocalObjectReference{
+									Name: "server-secret",
+								},
+								Key: "password",
+							},
+						},
+					}))
+
+					// Now remove the password and verify it's not set
+					zomboidServer.Spec.Password = nil
+					updateAndReconcile(ctx, k8sClient, reconciler, zomboidServer)
+
+					updatedDeployment := &appsv1.Deployment{}
+					Expect(k8sClient.Get(ctx, zomboidServerName, updatedDeployment)).To(Succeed())
+
+					updatedContainer := updatedDeployment.Spec.Template.Spec.Containers[0]
+					for _, env := range updatedContainer.Env {
+						Expect(env.Name).NotTo(Equal("ZOMBOID_SERVER_PASSWORD"))
+					}
 				})
 			})
 		})

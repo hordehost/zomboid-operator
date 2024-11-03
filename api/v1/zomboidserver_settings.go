@@ -14,9 +14,6 @@ type Identity struct {
 	// PublicDescription is the server description shown in browsers. Use \n for newlines.
 	PublicDescription string `json:"PublicDescription"`
 
-	// Password is required for clients to join. Ignored when hosting via Host button.
-	Password string `json:"Password"`
-
 	// ResetID determines if server has undergone soft-reset. If this number doesn't match client, client must create new character.
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:validation:Maximum=2147483647

@@ -94,6 +94,36 @@ func (r *ZomboidServerReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		},
 	}
 	_, err = controllerutil.CreateOrUpdate(ctx, r.Client, deployment, func() error {
+		envVars := []corev1.EnvVar{
+			{
+				Name:  "ZOMBOID_JVM_MAX_HEAP",
+				Value: fmt.Sprintf("%dm", zomboidServer.Spec.Resources.Limits.Memory().Value()/(1024*1024)),
+			},
+			{
+				Name:  "ZOMBOID_SERVER_NAME",
+				Value: zomboidServer.Name,
+			},
+			{
+				Name:  "ZOMBOID_SERVER_ADMIN_USERNAME",
+				Value: zomboidServer.Spec.Administrator.Username,
+			},
+			{
+				Name: "ZOMBOID_SERVER_ADMIN_PASSWORD",
+				ValueFrom: &corev1.EnvVarSource{
+					SecretKeyRef: &zomboidServer.Spec.Administrator.Password,
+				},
+			},
+		}
+
+		if zomboidServer.Spec.Password != nil {
+			envVars = append(envVars, corev1.EnvVar{
+				Name: "ZOMBOID_SERVER_PASSWORD",
+				ValueFrom: &corev1.EnvVarSource{
+					SecretKeyRef: zomboidServer.Spec.Password,
+				},
+			})
+		}
+
 		deployment.Spec = appsv1.DeploymentSpec{
 			Replicas: ptr.To(int32(1)),
 			Strategy: appsv1.DeploymentStrategy{
@@ -117,26 +147,7 @@ func (r *ZomboidServerReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 							Image:           fmt.Sprintf("hordehost/zomboid-server:%s", zomboidServer.Spec.Version),
 							ImagePullPolicy: corev1.PullIfNotPresent,
 							Resources:       zomboidServer.Spec.Resources,
-							Env: []corev1.EnvVar{
-								{
-									Name:  "ZOMBOID_JVM_MAX_HEAP",
-									Value: fmt.Sprintf("%dm", zomboidServer.Spec.Resources.Limits.Memory().Value()/(1024*1024)),
-								},
-								{
-									Name:  "ZOMBOID_SERVER_NAME",
-									Value: zomboidServer.Name,
-								},
-								{
-									Name:  "ZOMBOID_SERVER_ADMIN_USERNAME",
-									Value: zomboidServer.Spec.Administrator.Username,
-								},
-								{
-									Name: "ZOMBOID_SERVER_ADMIN_PASSWORD",
-									ValueFrom: &corev1.EnvVarSource{
-										SecretKeyRef: &zomboidServer.Spec.Administrator.Password,
-									},
-								},
-							},
+							Env:             envVars,
 							VolumeMounts: []corev1.VolumeMount{
 								{
 									Name:      "game-data",

@@ -20,75 +20,79 @@ type ZomboidServerSpec struct {
 	// Administrator defines the admin user credentials for the Zomboid server.
 	Administrator Administrator `json:"administrator"`
 
-	// Identity contains settings about how the server is identified and accessed
+	// Password is required for clients to join.
 	// +optional
-	Identity Identity `json:"identity"`
+	Password *corev1.SecretKeySelector `json:"password,omitempty"`
 
-	// Player contains player management settings
-	// +optional
-	Player Player `json:"player"`
+	// // Identity contains settings about how the server is identified and accessed
+	// // +optional
+	// Identity Identity `json:"identity"`
 
-	// Map contains map configuration settings
-	// +optional
-	Map Map `json:"map"`
+	// // Player contains player management settings
+	// // +optional
+	// Player Player `json:"player"`
 
-	// Mods contains mod configuration settings using the classic format of parallel mod/workshop lists.
-	// This is the traditional way to specify mods in the server.ini but is less structured. Consider using WorkshopMods instead.
-	// +optional
-	Mods Mods `json:"mods"`
+	// // Map contains map configuration settings
+	// // +optional
+	// Map Map `json:"map"`
 
-	// WorkshopMods contains Steam Workshop mods in a structured format.
-	// This is the recommended way to specify mods for the zomboid-operator, as it provides better organization and validation.
-	// +optional
-	WorkshopMods []WorkshopMod `json:"workshopMods"`
+	// // Mods contains mod configuration settings using the classic format of parallel mod/workshop lists.
+	// // This is the traditional way to specify mods in the server.ini but is less structured. Consider using WorkshopMods instead.
+	// // +optional
+	// Mods Mods `json:"mods"`
 
-	// Backup contains backup-related server settings
-	// +optional
-	Backup Backup `json:"backup"`
+	// // WorkshopMods contains Steam Workshop mods in a structured format.
+	// // This is the recommended way to specify mods for the zomboid-operator, as it provides better organization and validation.
+	// // +optional
+	// WorkshopMods []WorkshopMod `json:"workshopMods"`
 
-	// Logging contains logging configuration settings
-	// +optional
-	Logging Logging `json:"logging"`
+	// // Backup contains backup-related server settings
+	// // +optional
+	// Backup Backup `json:"backup"`
 
-	// Moderation contains admin and moderation settings
-	// +optional
-	Moderation Moderation `json:"moderation"`
+	// // Logging contains logging configuration settings
+	// // +optional
+	// Logging Logging `json:"logging"`
 
-	// Steam contains Steam-specific settings and anti-cheat
-	// +optional
-	Steam Steam `json:"steam"`
+	// // Moderation contains admin and moderation settings
+	// // +optional
+	// Moderation Moderation `json:"moderation"`
 
-	// Discord contains Discord integration settings
-	// +optional
-	Discord Discord `json:"discord"`
+	// // Steam contains Steam-specific settings and anti-cheat
+	// // +optional
+	// Steam Steam `json:"steam"`
 
-	// Communication contains chat and VOIP settings
-	// +optional
-	Communication Communication `json:"communication"`
+	// // Discord contains Discord integration settings
+	// // +optional
+	// Discord Discord `json:"discord"`
 
-	// Gameplay contains general gameplay rules and settings
-	// +optional
-	Gameplay Gameplay `json:"gameplay"`
+	// // Communication contains chat and VOIP settings
+	// // +optional
+	// Communication Communication `json:"communication"`
 
-	// PVP contains PVP-specific settings
-	// +optional
-	PVP PVP `json:"pvp"`
+	// // Gameplay contains general gameplay rules and settings
+	// // +optional
+	// Gameplay Gameplay `json:"gameplay"`
 
-	// Loot contains loot-related settings
-	// +optional
-	Loot Loot `json:"loot"`
+	// // PVP contains PVP-specific settings
+	// // +optional
+	// PVP PVP `json:"pvp"`
 
-	// Safehouse contains safehouse-related settings
-	// +optional
-	Safehouse Safehouse `json:"safehouse"`
+	// // Loot contains loot-related settings
+	// // +optional
+	// Loot Loot `json:"loot"`
 
-	// Faction contains faction-related settings
-	// +optional
-	Faction Faction `json:"faction"`
+	// // Safehouse contains safehouse-related settings
+	// // +optional
+	// Safehouse Safehouse `json:"safehouse"`
 
-	// AntiCheat configures the anti-cheat protection system
-	// +optional
-	AntiCheat AntiCheat `json:"antiCheat"`
+	// // Faction contains faction-related settings
+	// // +optional
+	// Faction Faction `json:"faction"`
+
+	// // AntiCheat configures the anti-cheat protection system
+	// // +optional
+	// AntiCheat AntiCheat `json:"antiCheat"`
 }
 
 // Storage defines the persistent storage configuration for the Zomboid server.
