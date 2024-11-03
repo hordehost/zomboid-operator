@@ -58,12 +58,18 @@ func (r *ZomboidServerReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 					corev1.ReadWriteOnce,
 				},
 				StorageClassName: zomboidServer.Spec.Storage.StorageClassName,
-				Resources:        zomboidServer.Spec.Storage.Resources,
+				Resources: corev1.VolumeResourceRequirements{
+					Requests: corev1.ResourceList{
+						corev1.ResourceStorage: zomboidServer.Spec.Storage.Request,
+					},
+				},
 			}
 		} else {
-			pvc.Spec.Resources = zomboidServer.Spec.Storage.Resources
+			if pvc.Spec.Resources.Requests == nil {
+				pvc.Spec.Resources.Requests = corev1.ResourceList{}
+			}
+			pvc.Spec.Resources.Requests[corev1.ResourceStorage] = zomboidServer.Spec.Storage.Request
 		}
-
 		return ctrl.SetControllerReference(zomboidServer, pvc, r.Scheme)
 	})
 	if err != nil {

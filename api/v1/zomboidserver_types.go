@@ -2,6 +2,7 @@ package v1
 
 import (
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -22,12 +23,13 @@ type ZomboidServerSpec struct {
 
 // Storage defines the persistent storage configuration for the Zomboid server.
 type Storage struct {
-	// StorageClassName is the name of the storage class to use for the PVC, if not set, the default storage class for the clusterwill be used.
+	// StorageClassName is the name of the storage class to use for the PVC, if not set, the default storage class for the cluster will be used.
 	// +optional
 	StorageClassName *string `json:"storageClassName,omitempty"`
 
-	// Resources defines the storage resources required by the Zomboid server.
-	Resources corev1.VolumeResourceRequirements `json:"resources"`
+	// Request specifies the amount of storage requested
+	// +kubebuilder:validation:Required
+	Request resource.Quantity `json:"request"`
 }
 
 // Administrator defines the credentials for the admin user.
