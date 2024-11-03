@@ -1,0 +1,27 @@
+# permissions for end users to edit zomboidservers.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: zomboid-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: zomboidserver-editor-role
+rules:
+  - apiGroups:
+      - horde.host
+    resources:
+      - zomboidservers
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - horde.host
+    resources:
+      - zomboidservers/status
+    verbs:
+      - get
