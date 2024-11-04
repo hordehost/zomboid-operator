@@ -5,13 +5,21 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"net/http"
+	"net/url"
+	"os"
+	"strings"
 	"time"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/portforward"
+	"k8s.io/client-go/transport/spdy"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -25,12 +33,14 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	zomboidv1 "github.com/hordehost/zomboid-operator/api/v1"
+	"github.com/hordehost/zomboid-operator/internal/settings"
 )
 
 // ZomboidServerReconciler reconciles a ZomboidServer object
 type ZomboidServerReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
+	Config *rest.Config
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -92,18 +102,12 @@ func (r *ZomboidServerReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{}, err
 	}
 
-	defer func() {
-		if err := r.Status().Update(ctx, zomboidServer); err != nil {
-			logger.Error(err, "Failed to update ZomboidServer status")
-		}
-	}()
-
 	result, err := r.reconcileInfrastructure(ctx, zomboidServer)
 	if result != nil {
-		return *result, err
+		return r.status(ctx, zomboidServer, result, err)
 	}
 	if err != nil {
-		return ctrl.Result{}, err
+		return r.status(ctx, zomboidServer, &ctrl.Result{}, err)
 	}
 
 	meta.SetStatusCondition(&zomboidServer.Status.Conditions, metav1.Condition{
@@ -140,18 +144,28 @@ func (r *ZomboidServerReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	}
 
 	if !zomboidServer.Status.Ready {
-		return ctrl.Result{RequeueAfter: 1 * time.Second}, nil
+		return r.status(ctx, zomboidServer, &ctrl.Result{RequeueAfter: 1 * time.Second}, nil)
 	}
 
 	result, err = r.reconcileSettings(ctx, zomboidServer)
 	if result != nil {
-		return *result, err
+		return r.status(ctx, zomboidServer, result, err)
 	}
 	if err != nil {
-		return ctrl.Result{}, err
+		return r.status(ctx, zomboidServer, &ctrl.Result{}, err)
 	}
 
-	return ctrl.Result{}, nil
+	return r.status(ctx, zomboidServer, &ctrl.Result{}, nil)
+}
+
+func (r *ZomboidServerReconciler) status(ctx context.Context, zomboidServer *zomboidv1.ZomboidServer, result *ctrl.Result, err error) (ctrl.Result, error) {
+	if statusErr := r.Status().Update(ctx, zomboidServer); statusErr != nil {
+		if errors.IsConflict(statusErr) {
+			return ctrl.Result{Requeue: true}, nil
+		}
+		return *result, statusErr
+	}
+	return *result, err
 }
 
 func commonLabels(zomboidServer *zomboidv1.ZomboidServer) map[string]string {
@@ -484,9 +498,129 @@ func (r *ZomboidServerReconciler) reconcileSettings(ctx context.Context, zomboid
 		return nil, nil
 	}
 
-	logger := log.FromContext(ctx)
+	// TODO: remove this once we have a way to test the settings
+	if true {
+		return nil, nil
+	}
 
-	logger.Info("TODO: Reconcile settings")
+	secret := &corev1.Secret{}
+	if err := r.Get(ctx, types.NamespacedName{
+		Name:      zomboidServer.Spec.Administrator.Password.LocalObjectReference.Name,
+		Namespace: zomboidServer.Namespace,
+	}, secret); err != nil {
+		return nil, fmt.Errorf("failed to get RCON secret: %w", err)
+	}
+
+	password := string(secret.Data[zomboidServer.Spec.Administrator.Password.Key])
+	if password == "" {
+		return nil, fmt.Errorf(
+			"RCON password not found in secret %s",
+			zomboidServer.Spec.Administrator.Password.LocalObjectReference.Name,
+		)
+	}
+
+	hostname := fmt.Sprintf("%s-rcon.%s.svc.cluster.local", zomboidServer.Name, zomboidServer.Namespace)
+	port := 27015
+
+	// TODO: how to distinguish between local development and in-cluster?
+	if true {
+		// For local development from a host, we need a port-forwarder to the RCON service
+		// so that we can connect to it.
+		parts := strings.Split(hostname, ".")
+		localPort, cleanup, err := setupPortForwarder(ctx, r.Config, r.Client, parts[1], parts[0], port)
+		if err != nil {
+			return nil, fmt.Errorf("failed to setup port forwarder: %w", err)
+		}
+		defer cleanup()
+
+		hostname = "localhost"
+		port = localPort
+	}
+
+	settings, err := settings.GetServerOptions(hostname, port, password)
+	if err != nil {
+		return nil, err
+	}
+
+	zomboidServer.Status.SettingsLastObserved = &metav1.Time{Time: time.Now()}
+	zomboidServer.Status.Settings = settings
 
 	return nil, nil
+}
+
+func setupPortForwarder(ctx context.Context, config *rest.Config, k8sClient client.Client, namespace string, serviceName string, port int) (int, func(), error) {
+	roundTripper, upgrader, err := spdy.RoundTripperFor(config)
+	if err != nil {
+		return 0, nil, fmt.Errorf("failed to create round tripper: %w", err)
+	}
+
+	logger := log.FromContext(ctx)
+	logger.Info("Setting up port forwarder", "namespace", namespace, "serviceName", serviceName, "port", port)
+
+	// Get the service to find its selector labels
+	svc := &corev1.Service{}
+	if err := k8sClient.Get(ctx, types.NamespacedName{Namespace: namespace, Name: serviceName}, svc); err != nil {
+		return 0, nil, fmt.Errorf("failed to get service: %w", err)
+	}
+
+	// List pods matching the service selector
+	pods := &corev1.PodList{}
+	if err := k8sClient.List(ctx, pods, &client.ListOptions{
+		Namespace:     namespace,
+		LabelSelector: labels.SelectorFromSet(svc.Spec.Selector),
+	}); err != nil {
+		return 0, nil, fmt.Errorf("failed to list pods: %w", err)
+	}
+
+	if len(pods.Items) == 0 {
+		return 0, nil, fmt.Errorf("no pods found for service %s", serviceName)
+	}
+
+	// Use the first pod's name for port forwarding
+	podName := pods.Items[0].Name
+	path := fmt.Sprintf("/api/v1/namespaces/%s/pods/%s/portforward", namespace, podName)
+	hostIP := strings.TrimLeft(config.Host, "htps:/")
+	serverURL := url.URL{Scheme: "https", Path: path, Host: hostIP}
+
+	logger.Info("Server URL", "url", serverURL.String())
+
+	dialer := spdy.NewDialer(upgrader, &http.Client{Transport: roundTripper}, http.MethodPost, &serverURL)
+
+	stopChan := make(chan struct{}, 1)
+	readyChan := make(chan struct{})
+
+	fw, err := portforward.NewOnAddresses(
+		dialer,
+		[]string{"localhost"}, []string{fmt.Sprintf("%d:%d", 0, port)},
+		stopChan, readyChan,
+		os.Stdout, os.Stderr,
+	)
+	if err != nil {
+		return 0, nil, fmt.Errorf("failed to create port forwarder: %w", err)
+	}
+
+	go func() {
+		err := fw.ForwardPorts()
+		if err != nil {
+			log.Log.Error(err, "Error forwarding ports")
+		}
+	}()
+
+	select {
+	case <-readyChan:
+	case <-ctx.Done():
+		return 0, nil, ctx.Err()
+	}
+
+	ports, err := fw.GetPorts()
+	if err != nil {
+		return 0, nil, fmt.Errorf("failed to get forwarded ports: %w", err)
+	}
+
+	cleanup := func() {
+		logger.Info("Stopping port forwarder", "namespace", namespace, "serviceName", serviceName)
+		close(stopChan)
+	}
+
+	return int(ports[0].Local), cleanup, nil
 }

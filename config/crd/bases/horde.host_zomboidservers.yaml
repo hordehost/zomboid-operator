@@ -75,479 +75,6 @@ spec:
                 - password
                 - username
                 type: object
-              antiCheat:
-                description: AntiCheat configures the anti-cheat protection system
-                properties:
-                  AntiCheatProtectionType1:
-                    default: true
-                    description: AntiCheatProtectionType1-24 enable different protections
-                    type: boolean
-                  AntiCheatProtectionType2:
-                    default: true
-                    type: boolean
-                  AntiCheatProtectionType2ThresholdMultiplier:
-                    default: 3
-                    description: Protection type threshold multipliers
-                    maximum: 10
-                    minimum: 1
-                    type: number
-                  AntiCheatProtectionType3:
-                    default: true
-                    type: boolean
-                  AntiCheatProtectionType3ThresholdMultiplier:
-                    default: 1
-                    maximum: 10
-                    minimum: 1
-                    type: number
-                  AntiCheatProtectionType4:
-                    default: true
-                    type: boolean
-                  AntiCheatProtectionType4ThresholdMultiplier:
-                    default: 1
-                    maximum: 10
-                    minimum: 1
-                    type: number
-                  AntiCheatProtectionType5:
-                    default: true
-                    type: boolean
-                  AntiCheatProtectionType6:
-                    default: true
-                    type: boolean
-                  AntiCheatProtectionType7:
-                    default: true
-                    type: boolean
-                  AntiCheatProtectionType8:
-                    default: true
-                    type: boolean
-                  AntiCheatProtectionType9:
-                    default: true
-                    type: boolean
-                  AntiCheatProtectionType9ThresholdMultiplier:
-                    default: 1
-                    maximum: 10
-                    minimum: 1
-                    type: number
-                  AntiCheatProtectionType10:
-                    default: true
-                    type: boolean
-                  AntiCheatProtectionType11:
-                    default: true
-                    type: boolean
-                  AntiCheatProtectionType12:
-                    default: true
-                    type: boolean
-                  AntiCheatProtectionType13:
-                    default: true
-                    type: boolean
-                  AntiCheatProtectionType14:
-                    default: true
-                    type: boolean
-                  AntiCheatProtectionType15:
-                    default: true
-                    type: boolean
-                  AntiCheatProtectionType15ThresholdMultiplier:
-                    default: 1
-                    maximum: 10
-                    minimum: 1
-                    type: number
-                  AntiCheatProtectionType16:
-                    default: true
-                    type: boolean
-                  AntiCheatProtectionType17:
-                    default: true
-                    type: boolean
-                  AntiCheatProtectionType18:
-                    default: true
-                    type: boolean
-                  AntiCheatProtectionType19:
-                    default: true
-                    type: boolean
-                  AntiCheatProtectionType20:
-                    default: true
-                    type: boolean
-                  AntiCheatProtectionType20ThresholdMultiplier:
-                    default: 1
-                    maximum: 10
-                    minimum: 1
-                    type: number
-                  AntiCheatProtectionType21:
-                    default: true
-                    type: boolean
-                  AntiCheatProtectionType22:
-                    default: true
-                    type: boolean
-                  AntiCheatProtectionType22ThresholdMultiplier:
-                    default: 1
-                    maximum: 10
-                    minimum: 1
-                    type: number
-                  AntiCheatProtectionType23:
-                    default: true
-                    type: boolean
-                  AntiCheatProtectionType24:
-                    default: true
-                    type: boolean
-                  AntiCheatProtectionType24ThresholdMultiplier:
-                    default: 6
-                    maximum: 10
-                    minimum: 1
-                    type: number
-                  DoLuaChecksum:
-                    default: true
-                    description: DoLuaChecksum enables kicking clients with mismatched
-                      game files
-                    type: boolean
-                  KickFastPlayers:
-                    default: false
-                    description: KickFastPlayers enables kicking speed hackers. May
-                      be buggy - use with caution.
-                    type: boolean
-                type: object
-              backup:
-                description: Backup contains backup-related server settings
-                properties:
-                  BackupsCount:
-                    default: 5
-                    description: BackupsCount is the number of backups to keep
-                    format: int32
-                    maximum: 300
-                    minimum: 1
-                    type: integer
-                  BackupsOnStart:
-                    default: true
-                    description: BackupsOnStart enables backups when server starts
-                    type: boolean
-                  BackupsOnVersionChange:
-                    default: true
-                    description: BackupsOnVersionChange enables backups on version
-                      changes
-                    type: boolean
-                  BackupsPeriod:
-                    default: 0
-                    description: BackupsPeriod is the backup interval in minutes
-                    format: int32
-                    maximum: 1500
-                    minimum: 0
-                    type: integer
-                  SaveWorldEveryMinutes:
-                    default: 0
-                    description: SaveWorldEveryMinutes is how often loaded map parts
-                      are saved. Map usually only saves when clients leave area.
-                    format: int32
-                    maximum: 2147483647
-                    minimum: 0
-                    type: integer
-                type: object
-              communication:
-                description: Communication contains chat and VOIP settings
-                properties:
-                  ChatStreams:
-                    default: s,r,a,w,y,sh,f,all
-                    description: ChatStreams lists available chat streams
-                    type: string
-                  GlobalChat:
-                    default: true
-                    description: GlobalChat enables global chat
-                    type: boolean
-                  ServerWelcomeMessage:
-                    description: ServerWelcomeMessage is shown to players on login.
-                      Use <LINE> for newlines and <RGB:r,g,b> for colors.
-                    type: string
-                  Voice3D:
-                    default: true
-                    description: Voice3D enables directional VOIP audio
-                    type: boolean
-                  VoiceEnable:
-                    default: true
-                    description: VoiceEnable enables VOIP
-                    type: boolean
-                  VoiceMaxDistance:
-                    default: 100
-                    description: VoiceMaxDistance is maximum VOIP audible distance
-                    maximum: 100000
-                    minimum: 0
-                    type: number
-                  VoiceMinDistance:
-                    default: 10
-                    description: VoiceMinDistance is minimum VOIP audible distance
-                    maximum: 100000
-                    minimum: 0
-                    type: number
-                type: object
-              discord:
-                description: Discord contains Discord integration settings
-                properties:
-                  DiscordChannel:
-                    description: DiscordChannel is the Discord channel name. Try channel
-                      ID if having difficulties.
-                    type: string
-                  DiscordChannelID:
-                    description: DiscordChannelID is the Discord channel ID. Use if
-                      having difficulties with channel name.
-                    type: string
-                  DiscordEnable:
-                    default: false
-                    description: DiscordEnable enables Discord chat integration
-                    type: boolean
-                  DiscordToken:
-                    description: DiscordToken is the Discord bot token
-                    type: string
-                type: object
-              faction:
-                description: Faction contains faction-related settings
-                properties:
-                  Faction:
-                    default: true
-                    description: Faction enables faction system
-                    type: boolean
-                  FactionDaySurvivedToCreate:
-                    default: 0
-                    description: FactionDaySurvivedToCreate is days before creation
-                    format: int32
-                    maximum: 2147483647
-                    minimum: 0
-                    type: integer
-                  FactionPlayersRequiredForTag:
-                    default: 1
-                    description: FactionPlayersRequiredForTag is players needed for
-                      tag
-                    format: int32
-                    maximum: 2147483647
-                    minimum: 1
-                    type: integer
-                type: object
-              gameplay:
-                description: Gameplay contains general gameplay rules and settings
-                properties:
-                  AllowDestructionBySledgehammer:
-                    default: true
-                    description: AllowDestructionBySledgehammer enables sledgehammer
-                      destruction
-                    type: boolean
-                  AnnounceDeath:
-                    default: false
-                    description: AnnounceDeath broadcasts player deaths
-                    type: boolean
-                  DisplayUserName:
-                    default: true
-                    description: DisplayUserName shows player names
-                    type: boolean
-                  FastForwardMultiplier:
-                    default: 40
-                    description: FastForwardMultiplier affects sleep time passage
-                    maximum: 100
-                    minimum: 1
-                    type: number
-                  KnockedDownAllowed:
-                    default: true
-                    description: KnockedDownAllowed enables knock downs
-                    type: boolean
-                  MinutesPerPage:
-                    default: 1
-                    description: MinutesPerPage is reading time per book page
-                    maximum: 60
-                    minimum: 0
-                    type: number
-                  NoFire:
-                    default: false
-                    description: NoFire disables all forms of fire except campfires
-                    type: boolean
-                  PauseEmpty:
-                    default: true
-                    description: PauseEmpty pauses time when no players online
-                    type: boolean
-                  PlayerRespawnWithOther:
-                    default: false
-                    description: PlayerRespawnWithOther enables respawning at other
-                      players
-                    type: boolean
-                  PlayerRespawnWithSelf:
-                    default: false
-                    description: PlayerRespawnWithSelf enables respawning at death
-                      location
-                    type: boolean
-                  ShowFirstAndLastName:
-                    default: false
-                    description: ShowFirstAndLastName shows full player names
-                    type: boolean
-                  SledgehammerOnlyInSafehouse:
-                    default: false
-                    description: SledgehammerOnlyInSafehouse restricts sledgehammer
-                      use to safehouses
-                    type: boolean
-                  SleepAllowed:
-                    default: false
-                    description: SleepAllowed enables sleeping
-                    type: boolean
-                  SleepNeeded:
-                    default: false
-                    description: SleepNeeded requires sleeping. Ignored if SleepAllowed=false
-                    type: boolean
-                  SneakModeHideFromOtherPlayers:
-                    default: true
-                    description: SneakModeHideFromOtherPlayers enables sneaking from
-                      players
-                    type: boolean
-                  SpawnItems:
-                    description: 'SpawnItems lists items given to new players. Example:
-                      Base.Axe,Base.Bag_BigHikingBag'
-                    type: string
-                  SpawnPoint:
-                    default: 0,0,0
-                    description: SpawnPoint forces spawn location (x,y,z). Find coordinates
-                      at map.projectzomboid.com. Ignored when 0,0,0.
-                    type: string
-                  SpeedLimit:
-                    default: 70
-                    description: SpeedLimit caps movement speed
-                    maximum: 150
-                    minimum: 10
-                    type: number
-                type: object
-              identity:
-                description: Identity contains settings about how the server is identified
-                  and accessed
-                properties:
-                  Public:
-                    default: false
-                    description: 'Public determines if server is visible in in-game
-                      browser. Note: Steam-enabled servers are always visible in Steam
-                      browser.'
-                    type: boolean
-                  PublicDescription:
-                    description: PublicDescription is the server description shown
-                      in browsers. Use \n for newlines.
-                    type: string
-                  PublicName:
-                    default: My PZ Server
-                    description: PublicName is the server name shown in browsers
-                    type: string
-                  ResetID:
-                    default: 485871306
-                    description: ResetID determines if server has undergone soft-reset.
-                      If this number doesn't match client, client must create new
-                      character.
-                    format: int32
-                    maximum: 2147483647
-                    minimum: 0
-                    type: integer
-                  ServerPlayerID:
-                    default: 63827612
-                    description: ServerPlayerID identifies characters from different
-                      servers. Used with ResetID.
-                    format: int32
-                    maximum: 2147483647
-                    minimum: 0
-                    type: integer
-                type: object
-              logging:
-                description: Logging contains logging configuration settings
-                properties:
-                  ClientActionLogs:
-                    default: ISEnterVehicle;ISExitVehicle;ISTakeEngineParts;
-                    description: ClientActionLogs lists actions written to ClientActionLogs.txt
-                    type: string
-                  ClientCommandFilter:
-                    default: -vehicle.*;+vehicle.damageWindow;+vehicle.fixPart;+vehicle.installPart;+vehicle.uninstallPart
-                    description: ClientCommandFilter lists commands not written to
-                      cmd.txt log
-                    type: string
-                  PerkLogs:
-                    default: true
-                    description: PerkLogs enables tracking player perk changes in
-                      PerkLog.txt
-                    type: boolean
-                type: object
-              loot:
-                description: Loot contains loot-related settings
-                properties:
-                  ConstructionPreventsLootRespawn:
-                    default: true
-                    description: ConstructionPreventsLootRespawn prevents respawn
-                      near construction
-                    type: boolean
-                  HoursForLootRespawn:
-                    default: 0
-                    description: HoursForLootRespawn is hours before loot respawns.
-                      Container must be looted once.
-                    format: int32
-                    maximum: 2147483647
-                    minimum: 0
-                    type: integer
-                  ItemNumbersLimitPerContainer:
-                    default: 0
-                    description: ItemNumbersLimitPerContainer caps items per container.
-                      Includes small items like nails.
-                    format: int32
-                    maximum: 9000
-                    minimum: 0
-                    type: integer
-                  MaxItemsForLootRespawn:
-                    default: 4
-                    description: MaxItemsForLootRespawn is max items per respawn
-                    format: int32
-                    maximum: 2147483647
-                    minimum: 1
-                    type: integer
-                  TrashDeleteAll:
-                    default: false
-                    description: TrashDeleteAll enables complete trash deletion
-                    type: boolean
-                type: object
-              map:
-                description: Map contains map configuration settings
-                properties:
-                  Map:
-                    default: Muldraugh, KY
-                    description: Map is the folder name of the map mod. Found in Steam/steamapps/workshop/modID/mods/modName/media/maps/
-                    type: string
-                type: object
-              moderation:
-                description: Moderation contains admin and moderation settings
-                properties:
-                  BanKickGlobalSound:
-                    default: true
-                    description: BanKickGlobalSound enables global sound on ban/kick
-                    type: boolean
-                  DisableRadioAdmin:
-                    default: true
-                    description: DisableRadioAdmin disables radio for admins
-                    type: boolean
-                  DisableRadioGM:
-                    default: true
-                    description: DisableRadioGM disables radio for GMs
-                    type: boolean
-                  DisableRadioInvisible:
-                    default: true
-                    description: DisableRadioInvisible disables radio for invisible
-                      players
-                    type: boolean
-                  DisableRadioModerator:
-                    default: false
-                    description: DisableRadioModerator disables radio for moderators
-                    type: boolean
-                  DisableRadioOverseer:
-                    default: false
-                    description: DisableRadioOverseer disables radio for overseers
-                    type: boolean
-                  DisableRadioStaff:
-                    default: false
-                    description: DisableRadioStaff disables radio for staff
-                    type: boolean
-                type: object
-              mods:
-                description: |-
-                  Mods contains mod configuration settings using the classic format of parallel mod/workshop lists.
-                  This is the traditional way to specify mods in the server.ini but is less structured. Consider using WorkshopMods instead.
-                properties:
-                  Mods:
-                    description: Mods lists mod loading IDs. Found in Steam/steamapps/workshop/modID/mods/modName/info.txt
-                    type: string
-                  WorkshopItems:
-                    description: WorkshopItems lists Workshop Mod IDs to download.
-                      Separate with semicolons.
-                    type: string
-                type: object
               password:
                 description: Password is required for clients to join.
                 properties:
@@ -571,123 +98,6 @@ spec:
                 - key
                 type: object
                 x-kubernetes-map-type: atomic
-              player:
-                description: Player contains player management settings
-                properties:
-                  AllowCoop:
-                    default: true
-                    description: AllowCoop enables splitscreen/co-op play
-                    type: boolean
-                  AllowNonAsciiUsername:
-                    default: false
-                    description: AllowNonAsciiUsername enables non-ASCII characters
-                      in usernames
-                    type: boolean
-                  AutoCreateUserInWhiteList:
-                    default: false
-                    description: AutoCreateUserInWhiteList adds unknown users to whitelist.
-                      Only for Open=true servers.
-                    type: boolean
-                  DenyLoginOnOverloadedServer:
-                    default: true
-                    description: DenyLoginOnOverloadedServer prevents logins when
-                      server is overloaded
-                    type: boolean
-                  DropOffWhiteListAfterDeath:
-                    default: false
-                    description: DropOffWhiteListAfterDeath removes accounts after
-                      death. Prevents new characters after death on Open=false servers.
-                    type: boolean
-                  LoginQueueConnectTimeout:
-                    default: 60
-                    description: LoginQueueConnectTimeout is timeout for login queue
-                      in seconds
-                    format: int32
-                    maximum: 1200
-                    minimum: 20
-                    type: integer
-                  LoginQueueEnabled:
-                    default: false
-                    description: LoginQueueEnabled enables login queue
-                    type: boolean
-                  MaxAccountsPerUser:
-                    default: 0
-                    description: MaxAccountsPerUser limits accounts per Steam user.
-                      Ignored when using Host button.
-                    format: int32
-                    maximum: 2147483647
-                    minimum: 0
-                    type: integer
-                  MaxPlayers:
-                    default: 32
-                    description: 'MaxPlayers is maximum concurrent players excluding
-                      admins. WARNING: Values above 32 may cause poor map streaming
-                      and desync.'
-                    format: int32
-                    maximum: 100
-                    minimum: 1
-                    type: integer
-                  Open:
-                    default: true
-                    description: Open allows joining without whitelist account. If
-                      false, admins must manually create accounts.
-                    type: boolean
-                  PingLimit:
-                    default: 400
-                    description: PingLimit is max ping in ms before kick. Set to 100
-                      to disable.
-                    format: int32
-                    maximum: 2147483647
-                    minimum: 100
-                    type: integer
-                type: object
-              pvp:
-                description: PVP contains PVP-specific settings
-                properties:
-                  PVP:
-                    default: true
-                    description: PVP enables player vs player combat
-                    type: boolean
-                  PVPFirearmDamageModifier:
-                    default: 50
-                    description: PVPFirearmDamageModifier affects firearm damage
-                    maximum: 500
-                    minimum: 0
-                    type: number
-                  PVPMeleeDamageModifier:
-                    default: 30
-                    description: PVPMeleeDamageModifier affects melee damage
-                    maximum: 500
-                    minimum: 0
-                    type: number
-                  PVPMeleeWhileHitReaction:
-                    default: false
-                    description: PVPMeleeWhileHitReaction enables hit reactions
-                    type: boolean
-                  SafetyCooldownTimer:
-                    default: 3
-                    description: SafetyCooldownTimer is cooldown between safety toggles
-                    format: int32
-                    maximum: 1000
-                    minimum: 0
-                    type: integer
-                  SafetySystem:
-                    default: true
-                    description: SafetySystem enables PVP safety system. When false,
-                      players can hurt each other anytime if PVP enabled.
-                    type: boolean
-                  SafetyToggleTimer:
-                    default: 2
-                    description: SafetyToggleTimer is delay for toggling safety
-                    format: int32
-                    maximum: 1000
-                    minimum: 0
-                    type: integer
-                  ShowSafety:
-                    default: true
-                    description: ShowSafety shows safety status with skull icon
-                    type: boolean
-                type: object
               resources:
                 description: Resources defines the compute resources required by the
                   Zomboid server.
@@ -748,68 +158,689 @@ spec:
                       More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
                     type: object
                 type: object
-              safehouse:
-                description: Safehouse contains safehouse-related settings
+              settings:
+                description: Settings contains the server's current settings
                 properties:
-                  AdminSafehouse:
-                    default: false
-                    description: AdminSafehouse enables admin safehouses
-                    type: boolean
-                  DisableSafehouseWhenPlayerConnected:
-                    default: false
-                    description: DisableSafehouseWhenPlayerConnected disables when
-                      owner online
-                    type: boolean
-                  PlayerSafehouse:
-                    default: false
-                    description: PlayerSafehouse enables player safehouses
-                    type: boolean
-                  SafeHouseRemovalTime:
-                    default: 144
-                    description: SafeHouseRemovalTime is hours before removal when
-                      not visited
-                    format: int32
-                    maximum: 2147483647
-                    minimum: 0
-                    type: integer
-                  SafehouseAllowFire:
-                    default: true
-                    description: SafehouseAllowFire allows fire in safehouses
-                    type: boolean
-                  SafehouseAllowLoot:
-                    default: true
-                    description: SafehouseAllowLoot allows looting in safehouses
-                    type: boolean
-                  SafehouseAllowNonResidential:
-                    default: false
-                    description: SafehouseAllowNonResidential allows non-residential
-                      safehouses
-                    type: boolean
-                  SafehouseAllowRespawn:
-                    default: false
-                    description: SafehouseAllowRespawn allows respawning in safehouses
-                    type: boolean
-                  SafehouseAllowTrepass:
-                    default: true
-                    description: SafehouseAllowTrepass allows entering others' safehouses
-                    type: boolean
-                  SafehouseDaySurvivedToClaim:
-                    default: 0
-                    description: SafehouseDaySurvivedToClaim is days before claiming
-                    format: int32
-                    maximum: 2147483647
-                    minimum: 0
-                    type: integer
-                type: object
-              steam:
-                description: Steam contains Steam-specific settings and anti-cheat
-                properties:
-                  SteamScoreboard:
-                    default: "true"
-                    description: SteamScoreboard controls visibility of Steam names/avatars.
-                      Can be "true" (visible to everyone), "false" (visible to no
-                      one), or "admin" (visible to only admins)
-                    type: string
+                  antiCheat:
+                    description: AntiCheat configures the anti-cheat protection system
+                    properties:
+                      AntiCheatProtectionType1:
+                        default: true
+                        description: AntiCheatProtectionType1-24 enable different
+                          protections
+                        type: boolean
+                      AntiCheatProtectionType2:
+                        default: true
+                        type: boolean
+                      AntiCheatProtectionType2ThresholdMultiplier:
+                        default: 3
+                        description: Protection type threshold multipliers
+                        maximum: 10
+                        minimum: 1
+                        type: number
+                      AntiCheatProtectionType3:
+                        default: true
+                        type: boolean
+                      AntiCheatProtectionType3ThresholdMultiplier:
+                        default: 1
+                        maximum: 10
+                        minimum: 1
+                        type: number
+                      AntiCheatProtectionType4:
+                        default: true
+                        type: boolean
+                      AntiCheatProtectionType4ThresholdMultiplier:
+                        default: 1
+                        maximum: 10
+                        minimum: 1
+                        type: number
+                      AntiCheatProtectionType5:
+                        default: true
+                        type: boolean
+                      AntiCheatProtectionType6:
+                        default: true
+                        type: boolean
+                      AntiCheatProtectionType7:
+                        default: true
+                        type: boolean
+                      AntiCheatProtectionType8:
+                        default: true
+                        type: boolean
+                      AntiCheatProtectionType9:
+                        default: true
+                        type: boolean
+                      AntiCheatProtectionType9ThresholdMultiplier:
+                        default: 1
+                        maximum: 10
+                        minimum: 1
+                        type: number
+                      AntiCheatProtectionType10:
+                        default: true
+                        type: boolean
+                      AntiCheatProtectionType11:
+                        default: true
+                        type: boolean
+                      AntiCheatProtectionType12:
+                        default: true
+                        type: boolean
+                      AntiCheatProtectionType13:
+                        default: true
+                        type: boolean
+                      AntiCheatProtectionType14:
+                        default: true
+                        type: boolean
+                      AntiCheatProtectionType15:
+                        default: true
+                        type: boolean
+                      AntiCheatProtectionType15ThresholdMultiplier:
+                        default: 1
+                        maximum: 10
+                        minimum: 1
+                        type: number
+                      AntiCheatProtectionType16:
+                        default: true
+                        type: boolean
+                      AntiCheatProtectionType17:
+                        default: true
+                        type: boolean
+                      AntiCheatProtectionType18:
+                        default: true
+                        type: boolean
+                      AntiCheatProtectionType19:
+                        default: true
+                        type: boolean
+                      AntiCheatProtectionType20:
+                        default: true
+                        type: boolean
+                      AntiCheatProtectionType20ThresholdMultiplier:
+                        default: 1
+                        maximum: 10
+                        minimum: 1
+                        type: number
+                      AntiCheatProtectionType21:
+                        default: true
+                        type: boolean
+                      AntiCheatProtectionType22:
+                        default: true
+                        type: boolean
+                      AntiCheatProtectionType22ThresholdMultiplier:
+                        default: 1
+                        maximum: 10
+                        minimum: 1
+                        type: number
+                      AntiCheatProtectionType23:
+                        default: true
+                        type: boolean
+                      AntiCheatProtectionType24:
+                        default: true
+                        type: boolean
+                      AntiCheatProtectionType24ThresholdMultiplier:
+                        default: 6
+                        maximum: 10
+                        minimum: 1
+                        type: number
+                      DoLuaChecksum:
+                        default: true
+                        description: DoLuaChecksum enables kicking clients with mismatched
+                          game files
+                        type: boolean
+                      KickFastPlayers:
+                        default: false
+                        description: KickFastPlayers enables kicking speed hackers.
+                          May be buggy - use with caution.
+                        type: boolean
+                    type: object
+                  backup:
+                    description: Backup contains backup-related server settings
+                    properties:
+                      BackupsCount:
+                        default: 5
+                        description: BackupsCount is the number of backups to keep
+                        format: int32
+                        maximum: 300
+                        minimum: 1
+                        type: integer
+                      BackupsOnStart:
+                        default: true
+                        description: BackupsOnStart enables backups when server starts
+                        type: boolean
+                      BackupsOnVersionChange:
+                        default: true
+                        description: BackupsOnVersionChange enables backups on version
+                          changes
+                        type: boolean
+                      BackupsPeriod:
+                        default: 0
+                        description: BackupsPeriod is the backup interval in minutes
+                        format: int32
+                        maximum: 1500
+                        minimum: 0
+                        type: integer
+                      SaveWorldEveryMinutes:
+                        default: 0
+                        description: SaveWorldEveryMinutes is how often loaded map
+                          parts are saved. Map usually only saves when clients leave
+                          area.
+                        format: int32
+                        maximum: 2147483647
+                        minimum: 0
+                        type: integer
+                    type: object
+                  communication:
+                    description: Communication contains chat and VOIP settings
+                    properties:
+                      ChatStreams:
+                        default: s,r,a,w,y,sh,f,all
+                        description: ChatStreams lists available chat streams
+                        type: string
+                      GlobalChat:
+                        default: true
+                        description: GlobalChat enables global chat
+                        type: boolean
+                      ServerWelcomeMessage:
+                        description: ServerWelcomeMessage is shown to players on login.
+                          Use <LINE> for newlines and <RGB:r,g,b> for colors.
+                        type: string
+                      Voice3D:
+                        default: true
+                        description: Voice3D enables directional VOIP audio
+                        type: boolean
+                      VoiceEnable:
+                        default: true
+                        description: VoiceEnable enables VOIP
+                        type: boolean
+                      VoiceMaxDistance:
+                        default: 100
+                        description: VoiceMaxDistance is maximum VOIP audible distance
+                        maximum: 100000
+                        minimum: 0
+                        type: number
+                      VoiceMinDistance:
+                        default: 10
+                        description: VoiceMinDistance is minimum VOIP audible distance
+                        maximum: 100000
+                        minimum: 0
+                        type: number
+                    type: object
+                  discord:
+                    description: Discord contains Discord integration settings
+                    properties:
+                      DiscordChannel:
+                        description: DiscordChannel is the Discord channel name. Try
+                          channel ID if having difficulties.
+                        type: string
+                      DiscordChannelID:
+                        description: DiscordChannelID is the Discord channel ID. Use
+                          if having difficulties with channel name.
+                        type: string
+                      DiscordEnable:
+                        default: false
+                        description: DiscordEnable enables Discord chat integration
+                        type: boolean
+                      DiscordToken:
+                        description: DiscordToken is the Discord bot token
+                        type: string
+                    type: object
+                  faction:
+                    description: Faction contains faction-related settings
+                    properties:
+                      Faction:
+                        default: true
+                        description: Faction enables faction system
+                        type: boolean
+                      FactionDaySurvivedToCreate:
+                        default: 0
+                        description: FactionDaySurvivedToCreate is days before creation
+                        format: int32
+                        maximum: 2147483647
+                        minimum: 0
+                        type: integer
+                      FactionPlayersRequiredForTag:
+                        default: 1
+                        description: FactionPlayersRequiredForTag is players needed
+                          for tag
+                        format: int32
+                        maximum: 2147483647
+                        minimum: 1
+                        type: integer
+                    type: object
+                  gameplay:
+                    description: Gameplay contains general gameplay rules and settings
+                    properties:
+                      AllowDestructionBySledgehammer:
+                        default: true
+                        description: AllowDestructionBySledgehammer enables sledgehammer
+                          destruction
+                        type: boolean
+                      AnnounceDeath:
+                        default: false
+                        description: AnnounceDeath broadcasts player deaths
+                        type: boolean
+                      DisplayUserName:
+                        default: true
+                        description: DisplayUserName shows player names
+                        type: boolean
+                      FastForwardMultiplier:
+                        default: 40
+                        description: FastForwardMultiplier affects sleep time passage
+                        maximum: 100
+                        minimum: 1
+                        type: number
+                      KnockedDownAllowed:
+                        default: true
+                        description: KnockedDownAllowed enables knock downs
+                        type: boolean
+                      MinutesPerPage:
+                        default: 1
+                        description: MinutesPerPage is reading time per book page
+                        maximum: 60
+                        minimum: 0
+                        type: number
+                      NoFire:
+                        default: false
+                        description: NoFire disables all forms of fire except campfires
+                        type: boolean
+                      PauseEmpty:
+                        default: true
+                        description: PauseEmpty pauses time when no players online
+                        type: boolean
+                      PlayerRespawnWithOther:
+                        default: false
+                        description: PlayerRespawnWithOther enables respawning at
+                          other players
+                        type: boolean
+                      PlayerRespawnWithSelf:
+                        default: false
+                        description: PlayerRespawnWithSelf enables respawning at death
+                          location
+                        type: boolean
+                      ShowFirstAndLastName:
+                        default: false
+                        description: ShowFirstAndLastName shows full player names
+                        type: boolean
+                      SledgehammerOnlyInSafehouse:
+                        default: false
+                        description: SledgehammerOnlyInSafehouse restricts sledgehammer
+                          use to safehouses
+                        type: boolean
+                      SleepAllowed:
+                        default: false
+                        description: SleepAllowed enables sleeping
+                        type: boolean
+                      SleepNeeded:
+                        default: false
+                        description: SleepNeeded requires sleeping. Ignored if SleepAllowed=false
+                        type: boolean
+                      SneakModeHideFromOtherPlayers:
+                        default: true
+                        description: SneakModeHideFromOtherPlayers enables sneaking
+                          from players
+                        type: boolean
+                      SpawnItems:
+                        description: 'SpawnItems lists items given to new players.
+                          Example: Base.Axe,Base.Bag_BigHikingBag'
+                        type: string
+                      SpawnPoint:
+                        default: 0,0,0
+                        description: SpawnPoint forces spawn location (x,y,z). Find
+                          coordinates at map.projectzomboid.com. Ignored when 0,0,0.
+                        type: string
+                      SpeedLimit:
+                        default: 70
+                        description: SpeedLimit caps movement speed
+                        maximum: 150
+                        minimum: 10
+                        type: number
+                    type: object
+                  identity:
+                    description: Identity contains settings about how the server is
+                      identified and accessed
+                    properties:
+                      Public:
+                        default: false
+                        description: 'Public determines if server is visible in in-game
+                          browser. Note: Steam-enabled servers are always visible
+                          in Steam browser.'
+                        type: boolean
+                      PublicDescription:
+                        description: PublicDescription is the server description shown
+                          in browsers. Use \n for newlines.
+                        type: string
+                      PublicName:
+                        default: My PZ Server
+                        description: PublicName is the server name shown in browsers
+                        type: string
+                      ResetID:
+                        default: 485871306
+                        description: ResetID determines if server has undergone soft-reset.
+                          If this number doesn't match client, client must create
+                          new character.
+                        format: int32
+                        maximum: 2147483647
+                        minimum: 0
+                        type: integer
+                      ServerPlayerID:
+                        default: 63827612
+                        description: ServerPlayerID identifies characters from different
+                          servers. Used with ResetID.
+                        format: int32
+                        maximum: 2147483647
+                        minimum: 0
+                        type: integer
+                    type: object
+                  logging:
+                    description: Logging contains logging configuration settings
+                    properties:
+                      ClientActionLogs:
+                        default: ISEnterVehicle;ISExitVehicle;ISTakeEngineParts;
+                        description: ClientActionLogs lists actions written to ClientActionLogs.txt
+                        type: string
+                      ClientCommandFilter:
+                        default: -vehicle.*;+vehicle.damageWindow;+vehicle.fixPart;+vehicle.installPart;+vehicle.uninstallPart
+                        description: ClientCommandFilter lists commands not written
+                          to cmd.txt log
+                        type: string
+                      PerkLogs:
+                        default: true
+                        description: PerkLogs enables tracking player perk changes
+                          in PerkLog.txt
+                        type: boolean
+                    type: object
+                  loot:
+                    description: Loot contains loot-related settings
+                    properties:
+                      ConstructionPreventsLootRespawn:
+                        default: true
+                        description: ConstructionPreventsLootRespawn prevents respawn
+                          near construction
+                        type: boolean
+                      HoursForLootRespawn:
+                        default: 0
+                        description: HoursForLootRespawn is hours before loot respawns.
+                          Container must be looted once.
+                        format: int32
+                        maximum: 2147483647
+                        minimum: 0
+                        type: integer
+                      ItemNumbersLimitPerContainer:
+                        default: 0
+                        description: ItemNumbersLimitPerContainer caps items per container.
+                          Includes small items like nails.
+                        format: int32
+                        maximum: 9000
+                        minimum: 0
+                        type: integer
+                      MaxItemsForLootRespawn:
+                        default: 4
+                        description: MaxItemsForLootRespawn is max items per respawn
+                        format: int32
+                        maximum: 2147483647
+                        minimum: 1
+                        type: integer
+                      TrashDeleteAll:
+                        default: false
+                        description: TrashDeleteAll enables complete trash deletion
+                        type: boolean
+                    type: object
+                  map:
+                    description: Map contains map configuration settings
+                    properties:
+                      Map:
+                        default: Muldraugh, KY
+                        description: Map is the folder name of the map mod. Found
+                          in Steam/steamapps/workshop/modID/mods/modName/media/maps/
+                        type: string
+                    type: object
+                  moderation:
+                    description: Moderation contains admin and moderation settings
+                    properties:
+                      BanKickGlobalSound:
+                        default: true
+                        description: BanKickGlobalSound enables global sound on ban/kick
+                        type: boolean
+                      DisableRadioAdmin:
+                        default: true
+                        description: DisableRadioAdmin disables radio for admins
+                        type: boolean
+                      DisableRadioGM:
+                        default: true
+                        description: DisableRadioGM disables radio for GMs
+                        type: boolean
+                      DisableRadioInvisible:
+                        default: true
+                        description: DisableRadioInvisible disables radio for invisible
+                          players
+                        type: boolean
+                      DisableRadioModerator:
+                        default: false
+                        description: DisableRadioModerator disables radio for moderators
+                        type: boolean
+                      DisableRadioOverseer:
+                        default: false
+                        description: DisableRadioOverseer disables radio for overseers
+                        type: boolean
+                      DisableRadioStaff:
+                        default: false
+                        description: DisableRadioStaff disables radio for staff
+                        type: boolean
+                    type: object
+                  mods:
+                    description: |-
+                      Mods contains mod configuration settings using the classic format of parallel mod/workshop lists.
+                      This is the traditional way to specify mods in the server.ini but is less structured. Consider using WorkshopMods instead.
+                    properties:
+                      Mods:
+                        description: Mods lists mod loading IDs. Found in Steam/steamapps/workshop/modID/mods/modName/info.txt
+                        type: string
+                      WorkshopItems:
+                        description: WorkshopItems lists Workshop Mod IDs to download.
+                          Separate with semicolons.
+                        type: string
+                    type: object
+                  player:
+                    description: Player contains player management settings
+                    properties:
+                      AllowCoop:
+                        default: true
+                        description: AllowCoop enables splitscreen/co-op play
+                        type: boolean
+                      AllowNonAsciiUsername:
+                        default: false
+                        description: AllowNonAsciiUsername enables non-ASCII characters
+                          in usernames
+                        type: boolean
+                      AutoCreateUserInWhiteList:
+                        default: false
+                        description: AutoCreateUserInWhiteList adds unknown users
+                          to whitelist. Only for Open=true servers.
+                        type: boolean
+                      DenyLoginOnOverloadedServer:
+                        default: true
+                        description: DenyLoginOnOverloadedServer prevents logins when
+                          server is overloaded
+                        type: boolean
+                      DropOffWhiteListAfterDeath:
+                        default: false
+                        description: DropOffWhiteListAfterDeath removes accounts after
+                          death. Prevents new characters after death on Open=false
+                          servers.
+                        type: boolean
+                      LoginQueueConnectTimeout:
+                        default: 60
+                        description: LoginQueueConnectTimeout is timeout for login
+                          queue in seconds
+                        format: int32
+                        maximum: 1200
+                        minimum: 20
+                        type: integer
+                      LoginQueueEnabled:
+                        default: false
+                        description: LoginQueueEnabled enables login queue
+                        type: boolean
+                      MaxAccountsPerUser:
+                        default: 0
+                        description: MaxAccountsPerUser limits accounts per Steam
+                          user. Ignored when using Host button.
+                        format: int32
+                        maximum: 2147483647
+                        minimum: 0
+                        type: integer
+                      MaxPlayers:
+                        default: 32
+                        description: 'MaxPlayers is maximum concurrent players excluding
+                          admins. WARNING: Values above 32 may cause poor map streaming
+                          and desync.'
+                        format: int32
+                        maximum: 100
+                        minimum: 1
+                        type: integer
+                      Open:
+                        default: true
+                        description: Open allows joining without whitelist account.
+                          If false, admins must manually create accounts.
+                        type: boolean
+                      PingLimit:
+                        default: 400
+                        description: PingLimit is max ping in ms before kick. Set
+                          to 100 to disable.
+                        format: int32
+                        maximum: 2147483647
+                        minimum: 100
+                        type: integer
+                    type: object
+                  pvp:
+                    description: PVP contains PVP-specific settings
+                    properties:
+                      PVP:
+                        default: true
+                        description: PVP enables player vs player combat
+                        type: boolean
+                      PVPFirearmDamageModifier:
+                        default: 50
+                        description: PVPFirearmDamageModifier affects firearm damage
+                        maximum: 500
+                        minimum: 0
+                        type: number
+                      PVPMeleeDamageModifier:
+                        default: 30
+                        description: PVPMeleeDamageModifier affects melee damage
+                        maximum: 500
+                        minimum: 0
+                        type: number
+                      PVPMeleeWhileHitReaction:
+                        default: false
+                        description: PVPMeleeWhileHitReaction enables hit reactions
+                        type: boolean
+                      SafetyCooldownTimer:
+                        default: 3
+                        description: SafetyCooldownTimer is cooldown between safety
+                          toggles
+                        format: int32
+                        maximum: 1000
+                        minimum: 0
+                        type: integer
+                      SafetySystem:
+                        default: true
+                        description: SafetySystem enables PVP safety system. When
+                          false, players can hurt each other anytime if PVP enabled.
+                        type: boolean
+                      SafetyToggleTimer:
+                        default: 2
+                        description: SafetyToggleTimer is delay for toggling safety
+                        format: int32
+                        maximum: 1000
+                        minimum: 0
+                        type: integer
+                      ShowSafety:
+                        default: true
+                        description: ShowSafety shows safety status with skull icon
+                        type: boolean
+                    type: object
+                  safehouse:
+                    description: Safehouse contains safehouse-related settings
+                    properties:
+                      AdminSafehouse:
+                        default: false
+                        description: AdminSafehouse enables admin safehouses
+                        type: boolean
+                      DisableSafehouseWhenPlayerConnected:
+                        default: false
+                        description: DisableSafehouseWhenPlayerConnected disables
+                          when owner online
+                        type: boolean
+                      PlayerSafehouse:
+                        default: false
+                        description: PlayerSafehouse enables player safehouses
+                        type: boolean
+                      SafeHouseRemovalTime:
+                        default: 144
+                        description: SafeHouseRemovalTime is hours before removal
+                          when not visited
+                        format: int32
+                        maximum: 2147483647
+                        minimum: 0
+                        type: integer
+                      SafehouseAllowFire:
+                        default: true
+                        description: SafehouseAllowFire allows fire in safehouses
+                        type: boolean
+                      SafehouseAllowLoot:
+                        default: true
+                        description: SafehouseAllowLoot allows looting in safehouses
+                        type: boolean
+                      SafehouseAllowNonResidential:
+                        default: false
+                        description: SafehouseAllowNonResidential allows non-residential
+                          safehouses
+                        type: boolean
+                      SafehouseAllowRespawn:
+                        default: false
+                        description: SafehouseAllowRespawn allows respawning in safehouses
+                        type: boolean
+                      SafehouseAllowTrepass:
+                        default: true
+                        description: SafehouseAllowTrepass allows entering others'
+                          safehouses
+                        type: boolean
+                      SafehouseDaySurvivedToClaim:
+                        default: 0
+                        description: SafehouseDaySurvivedToClaim is days before claiming
+                        format: int32
+                        maximum: 2147483647
+                        minimum: 0
+                        type: integer
+                    type: object
+                  steam:
+                    description: Steam contains Steam-specific settings and anti-cheat
+                    properties:
+                      SteamScoreboard:
+                        default: "true"
+                        description: SteamScoreboard controls visibility of Steam
+                          names/avatars. Can be "true" (visible to everyone), "false"
+                          (visible to no one), or "admin" (visible to only admins)
+                        type: string
+                    type: object
+                  workshopMods:
+                    description: |-
+                      WorkshopMods contains Steam Workshop mods in a structured format.
+                      This is the recommended way to specify mods for the zomboid-operator, as it provides better organization and validation.
+                    items:
+                      description: |-
+                        WorkshopMod pairs a mod's loading ID with its Steam Workshop ID,
+                        providing a more structured way to specify mods compared to the classic parallel lists
+                      properties:
+                        modID:
+                          description: ModID is the mod loading ID found in Steam/steamapps/workshop/modID/mods/modName/info.txt
+                          type: string
+                        workshopID:
+                          description: WorkshopID is the Steam Workshop ID used to
+                            download the mod
+                          type: string
+                      required:
+                      - modID
+                      - workshopID
+                      type: object
+                    type: array
                 type: object
               storage:
                 description: Storage defines the persistent storage configuration
@@ -833,27 +864,6 @@ spec:
               version:
                 description: Version is the version of the Zomboid server to run.
                 type: string
-              workshopMods:
-                description: |-
-                  WorkshopMods contains Steam Workshop mods in a structured format.
-                  This is the recommended way to specify mods for the zomboid-operator, as it provides better organization and validation.
-                items:
-                  description: |-
-                    WorkshopMod pairs a mod's loading ID with its Steam Workshop ID,
-                    providing a more structured way to specify mods compared to the classic parallel lists
-                  properties:
-                    modID:
-                      description: ModID is the mod loading ID found in Steam/steamapps/workshop/modID/mods/modName/info.txt
-                      type: string
-                    workshopID:
-                      description: WorkshopID is the Steam Workshop ID used to download
-                        the mod
-                      type: string
-                  required:
-                  - modID
-                  - workshopID
-                  type: object
-                type: array
             required:
             - administrator
             - resources
@@ -928,6 +938,695 @@ spec:
                 description: Ready indicates whether the server is ready to accept
                   players
                 type: boolean
+              settings:
+                description: Settings contains the server's current settings
+                properties:
+                  antiCheat:
+                    description: AntiCheat configures the anti-cheat protection system
+                    properties:
+                      AntiCheatProtectionType1:
+                        default: true
+                        description: AntiCheatProtectionType1-24 enable different
+                          protections
+                        type: boolean
+                      AntiCheatProtectionType2:
+                        default: true
+                        type: boolean
+                      AntiCheatProtectionType2ThresholdMultiplier:
+                        default: 3
+                        description: Protection type threshold multipliers
+                        maximum: 10
+                        minimum: 1
+                        type: number
+                      AntiCheatProtectionType3:
+                        default: true
+                        type: boolean
+                      AntiCheatProtectionType3ThresholdMultiplier:
+                        default: 1
+                        maximum: 10
+                        minimum: 1
+                        type: number
+                      AntiCheatProtectionType4:
+                        default: true
+                        type: boolean
+                      AntiCheatProtectionType4ThresholdMultiplier:
+                        default: 1
+                        maximum: 10
+                        minimum: 1
+                        type: number
+                      AntiCheatProtectionType5:
+                        default: true
+                        type: boolean
+                      AntiCheatProtectionType6:
+                        default: true
+                        type: boolean
+                      AntiCheatProtectionType7:
+                        default: true
+                        type: boolean
+                      AntiCheatProtectionType8:
+                        default: true
+                        type: boolean
+                      AntiCheatProtectionType9:
+                        default: true
+                        type: boolean
+                      AntiCheatProtectionType9ThresholdMultiplier:
+                        default: 1
+                        maximum: 10
+                        minimum: 1
+                        type: number
+                      AntiCheatProtectionType10:
+                        default: true
+                        type: boolean
+                      AntiCheatProtectionType11:
+                        default: true
+                        type: boolean
+                      AntiCheatProtectionType12:
+                        default: true
+                        type: boolean
+                      AntiCheatProtectionType13:
+                        default: true
+                        type: boolean
+                      AntiCheatProtectionType14:
+                        default: true
+                        type: boolean
+                      AntiCheatProtectionType15:
+                        default: true
+                        type: boolean
+                      AntiCheatProtectionType15ThresholdMultiplier:
+                        default: 1
+                        maximum: 10
+                        minimum: 1
+                        type: number
+                      AntiCheatProtectionType16:
+                        default: true
+                        type: boolean
+                      AntiCheatProtectionType17:
+                        default: true
+                        type: boolean
+                      AntiCheatProtectionType18:
+                        default: true
+                        type: boolean
+                      AntiCheatProtectionType19:
+                        default: true
+                        type: boolean
+                      AntiCheatProtectionType20:
+                        default: true
+                        type: boolean
+                      AntiCheatProtectionType20ThresholdMultiplier:
+                        default: 1
+                        maximum: 10
+                        minimum: 1
+                        type: number
+                      AntiCheatProtectionType21:
+                        default: true
+                        type: boolean
+                      AntiCheatProtectionType22:
+                        default: true
+                        type: boolean
+                      AntiCheatProtectionType22ThresholdMultiplier:
+                        default: 1
+                        maximum: 10
+                        minimum: 1
+                        type: number
+                      AntiCheatProtectionType23:
+                        default: true
+                        type: boolean
+                      AntiCheatProtectionType24:
+                        default: true
+                        type: boolean
+                      AntiCheatProtectionType24ThresholdMultiplier:
+                        default: 6
+                        maximum: 10
+                        minimum: 1
+                        type: number
+                      DoLuaChecksum:
+                        default: true
+                        description: DoLuaChecksum enables kicking clients with mismatched
+                          game files
+                        type: boolean
+                      KickFastPlayers:
+                        default: false
+                        description: KickFastPlayers enables kicking speed hackers.
+                          May be buggy - use with caution.
+                        type: boolean
+                    type: object
+                  backup:
+                    description: Backup contains backup-related server settings
+                    properties:
+                      BackupsCount:
+                        default: 5
+                        description: BackupsCount is the number of backups to keep
+                        format: int32
+                        maximum: 300
+                        minimum: 1
+                        type: integer
+                      BackupsOnStart:
+                        default: true
+                        description: BackupsOnStart enables backups when server starts
+                        type: boolean
+                      BackupsOnVersionChange:
+                        default: true
+                        description: BackupsOnVersionChange enables backups on version
+                          changes
+                        type: boolean
+                      BackupsPeriod:
+                        default: 0
+                        description: BackupsPeriod is the backup interval in minutes
+                        format: int32
+                        maximum: 1500
+                        minimum: 0
+                        type: integer
+                      SaveWorldEveryMinutes:
+                        default: 0
+                        description: SaveWorldEveryMinutes is how often loaded map
+                          parts are saved. Map usually only saves when clients leave
+                          area.
+                        format: int32
+                        maximum: 2147483647
+                        minimum: 0
+                        type: integer
+                    type: object
+                  communication:
+                    description: Communication contains chat and VOIP settings
+                    properties:
+                      ChatStreams:
+                        default: s,r,a,w,y,sh,f,all
+                        description: ChatStreams lists available chat streams
+                        type: string
+                      GlobalChat:
+                        default: true
+                        description: GlobalChat enables global chat
+                        type: boolean
+                      ServerWelcomeMessage:
+                        description: ServerWelcomeMessage is shown to players on login.
+                          Use <LINE> for newlines and <RGB:r,g,b> for colors.
+                        type: string
+                      Voice3D:
+                        default: true
+                        description: Voice3D enables directional VOIP audio
+                        type: boolean
+                      VoiceEnable:
+                        default: true
+                        description: VoiceEnable enables VOIP
+                        type: boolean
+                      VoiceMaxDistance:
+                        default: 100
+                        description: VoiceMaxDistance is maximum VOIP audible distance
+                        maximum: 100000
+                        minimum: 0
+                        type: number
+                      VoiceMinDistance:
+                        default: 10
+                        description: VoiceMinDistance is minimum VOIP audible distance
+                        maximum: 100000
+                        minimum: 0
+                        type: number
+                    type: object
+                  discord:
+                    description: Discord contains Discord integration settings
+                    properties:
+                      DiscordChannel:
+                        description: DiscordChannel is the Discord channel name. Try
+                          channel ID if having difficulties.
+                        type: string
+                      DiscordChannelID:
+                        description: DiscordChannelID is the Discord channel ID. Use
+                          if having difficulties with channel name.
+                        type: string
+                      DiscordEnable:
+                        default: false
+                        description: DiscordEnable enables Discord chat integration
+                        type: boolean
+                      DiscordToken:
+                        description: DiscordToken is the Discord bot token
+                        type: string
+                    type: object
+                  faction:
+                    description: Faction contains faction-related settings
+                    properties:
+                      Faction:
+                        default: true
+                        description: Faction enables faction system
+                        type: boolean
+                      FactionDaySurvivedToCreate:
+                        default: 0
+                        description: FactionDaySurvivedToCreate is days before creation
+                        format: int32
+                        maximum: 2147483647
+                        minimum: 0
+                        type: integer
+                      FactionPlayersRequiredForTag:
+                        default: 1
+                        description: FactionPlayersRequiredForTag is players needed
+                          for tag
+                        format: int32
+                        maximum: 2147483647
+                        minimum: 1
+                        type: integer
+                    type: object
+                  gameplay:
+                    description: Gameplay contains general gameplay rules and settings
+                    properties:
+                      AllowDestructionBySledgehammer:
+                        default: true
+                        description: AllowDestructionBySledgehammer enables sledgehammer
+                          destruction
+                        type: boolean
+                      AnnounceDeath:
+                        default: false
+                        description: AnnounceDeath broadcasts player deaths
+                        type: boolean
+                      DisplayUserName:
+                        default: true
+                        description: DisplayUserName shows player names
+                        type: boolean
+                      FastForwardMultiplier:
+                        default: 40
+                        description: FastForwardMultiplier affects sleep time passage
+                        maximum: 100
+                        minimum: 1
+                        type: number
+                      KnockedDownAllowed:
+                        default: true
+                        description: KnockedDownAllowed enables knock downs
+                        type: boolean
+                      MinutesPerPage:
+                        default: 1
+                        description: MinutesPerPage is reading time per book page
+                        maximum: 60
+                        minimum: 0
+                        type: number
+                      NoFire:
+                        default: false
+                        description: NoFire disables all forms of fire except campfires
+                        type: boolean
+                      PauseEmpty:
+                        default: true
+                        description: PauseEmpty pauses time when no players online
+                        type: boolean
+                      PlayerRespawnWithOther:
+                        default: false
+                        description: PlayerRespawnWithOther enables respawning at
+                          other players
+                        type: boolean
+                      PlayerRespawnWithSelf:
+                        default: false
+                        description: PlayerRespawnWithSelf enables respawning at death
+                          location
+                        type: boolean
+                      ShowFirstAndLastName:
+                        default: false
+                        description: ShowFirstAndLastName shows full player names
+                        type: boolean
+                      SledgehammerOnlyInSafehouse:
+                        default: false
+                        description: SledgehammerOnlyInSafehouse restricts sledgehammer
+                          use to safehouses
+                        type: boolean
+                      SleepAllowed:
+                        default: false
+                        description: SleepAllowed enables sleeping
+                        type: boolean
+                      SleepNeeded:
+                        default: false
+                        description: SleepNeeded requires sleeping. Ignored if SleepAllowed=false
+                        type: boolean
+                      SneakModeHideFromOtherPlayers:
+                        default: true
+                        description: SneakModeHideFromOtherPlayers enables sneaking
+                          from players
+                        type: boolean
+                      SpawnItems:
+                        description: 'SpawnItems lists items given to new players.
+                          Example: Base.Axe,Base.Bag_BigHikingBag'
+                        type: string
+                      SpawnPoint:
+                        default: 0,0,0
+                        description: SpawnPoint forces spawn location (x,y,z). Find
+                          coordinates at map.projectzomboid.com. Ignored when 0,0,0.
+                        type: string
+                      SpeedLimit:
+                        default: 70
+                        description: SpeedLimit caps movement speed
+                        maximum: 150
+                        minimum: 10
+                        type: number
+                    type: object
+                  identity:
+                    description: Identity contains settings about how the server is
+                      identified and accessed
+                    properties:
+                      Public:
+                        default: false
+                        description: 'Public determines if server is visible in in-game
+                          browser. Note: Steam-enabled servers are always visible
+                          in Steam browser.'
+                        type: boolean
+                      PublicDescription:
+                        description: PublicDescription is the server description shown
+                          in browsers. Use \n for newlines.
+                        type: string
+                      PublicName:
+                        default: My PZ Server
+                        description: PublicName is the server name shown in browsers
+                        type: string
+                      ResetID:
+                        default: 485871306
+                        description: ResetID determines if server has undergone soft-reset.
+                          If this number doesn't match client, client must create
+                          new character.
+                        format: int32
+                        maximum: 2147483647
+                        minimum: 0
+                        type: integer
+                      ServerPlayerID:
+                        default: 63827612
+                        description: ServerPlayerID identifies characters from different
+                          servers. Used with ResetID.
+                        format: int32
+                        maximum: 2147483647
+                        minimum: 0
+                        type: integer
+                    type: object
+                  logging:
+                    description: Logging contains logging configuration settings
+                    properties:
+                      ClientActionLogs:
+                        default: ISEnterVehicle;ISExitVehicle;ISTakeEngineParts;
+                        description: ClientActionLogs lists actions written to ClientActionLogs.txt
+                        type: string
+                      ClientCommandFilter:
+                        default: -vehicle.*;+vehicle.damageWindow;+vehicle.fixPart;+vehicle.installPart;+vehicle.uninstallPart
+                        description: ClientCommandFilter lists commands not written
+                          to cmd.txt log
+                        type: string
+                      PerkLogs:
+                        default: true
+                        description: PerkLogs enables tracking player perk changes
+                          in PerkLog.txt
+                        type: boolean
+                    type: object
+                  loot:
+                    description: Loot contains loot-related settings
+                    properties:
+                      ConstructionPreventsLootRespawn:
+                        default: true
+                        description: ConstructionPreventsLootRespawn prevents respawn
+                          near construction
+                        type: boolean
+                      HoursForLootRespawn:
+                        default: 0
+                        description: HoursForLootRespawn is hours before loot respawns.
+                          Container must be looted once.
+                        format: int32
+                        maximum: 2147483647
+                        minimum: 0
+                        type: integer
+                      ItemNumbersLimitPerContainer:
+                        default: 0
+                        description: ItemNumbersLimitPerContainer caps items per container.
+                          Includes small items like nails.
+                        format: int32
+                        maximum: 9000
+                        minimum: 0
+                        type: integer
+                      MaxItemsForLootRespawn:
+                        default: 4
+                        description: MaxItemsForLootRespawn is max items per respawn
+                        format: int32
+                        maximum: 2147483647
+                        minimum: 1
+                        type: integer
+                      TrashDeleteAll:
+                        default: false
+                        description: TrashDeleteAll enables complete trash deletion
+                        type: boolean
+                    type: object
+                  map:
+                    description: Map contains map configuration settings
+                    properties:
+                      Map:
+                        default: Muldraugh, KY
+                        description: Map is the folder name of the map mod. Found
+                          in Steam/steamapps/workshop/modID/mods/modName/media/maps/
+                        type: string
+                    type: object
+                  moderation:
+                    description: Moderation contains admin and moderation settings
+                    properties:
+                      BanKickGlobalSound:
+                        default: true
+                        description: BanKickGlobalSound enables global sound on ban/kick
+                        type: boolean
+                      DisableRadioAdmin:
+                        default: true
+                        description: DisableRadioAdmin disables radio for admins
+                        type: boolean
+                      DisableRadioGM:
+                        default: true
+                        description: DisableRadioGM disables radio for GMs
+                        type: boolean
+                      DisableRadioInvisible:
+                        default: true
+                        description: DisableRadioInvisible disables radio for invisible
+                          players
+                        type: boolean
+                      DisableRadioModerator:
+                        default: false
+                        description: DisableRadioModerator disables radio for moderators
+                        type: boolean
+                      DisableRadioOverseer:
+                        default: false
+                        description: DisableRadioOverseer disables radio for overseers
+                        type: boolean
+                      DisableRadioStaff:
+                        default: false
+                        description: DisableRadioStaff disables radio for staff
+                        type: boolean
+                    type: object
+                  mods:
+                    description: |-
+                      Mods contains mod configuration settings using the classic format of parallel mod/workshop lists.
+                      This is the traditional way to specify mods in the server.ini but is less structured. Consider using WorkshopMods instead.
+                    properties:
+                      Mods:
+                        description: Mods lists mod loading IDs. Found in Steam/steamapps/workshop/modID/mods/modName/info.txt
+                        type: string
+                      WorkshopItems:
+                        description: WorkshopItems lists Workshop Mod IDs to download.
+                          Separate with semicolons.
+                        type: string
+                    type: object
+                  player:
+                    description: Player contains player management settings
+                    properties:
+                      AllowCoop:
+                        default: true
+                        description: AllowCoop enables splitscreen/co-op play
+                        type: boolean
+                      AllowNonAsciiUsername:
+                        default: false
+                        description: AllowNonAsciiUsername enables non-ASCII characters
+                          in usernames
+                        type: boolean
+                      AutoCreateUserInWhiteList:
+                        default: false
+                        description: AutoCreateUserInWhiteList adds unknown users
+                          to whitelist. Only for Open=true servers.
+                        type: boolean
+                      DenyLoginOnOverloadedServer:
+                        default: true
+                        description: DenyLoginOnOverloadedServer prevents logins when
+                          server is overloaded
+                        type: boolean
+                      DropOffWhiteListAfterDeath:
+                        default: false
+                        description: DropOffWhiteListAfterDeath removes accounts after
+                          death. Prevents new characters after death on Open=false
+                          servers.
+                        type: boolean
+                      LoginQueueConnectTimeout:
+                        default: 60
+                        description: LoginQueueConnectTimeout is timeout for login
+                          queue in seconds
+                        format: int32
+                        maximum: 1200
+                        minimum: 20
+                        type: integer
+                      LoginQueueEnabled:
+                        default: false
+                        description: LoginQueueEnabled enables login queue
+                        type: boolean
+                      MaxAccountsPerUser:
+                        default: 0
+                        description: MaxAccountsPerUser limits accounts per Steam
+                          user. Ignored when using Host button.
+                        format: int32
+                        maximum: 2147483647
+                        minimum: 0
+                        type: integer
+                      MaxPlayers:
+                        default: 32
+                        description: 'MaxPlayers is maximum concurrent players excluding
+                          admins. WARNING: Values above 32 may cause poor map streaming
+                          and desync.'
+                        format: int32
+                        maximum: 100
+                        minimum: 1
+                        type: integer
+                      Open:
+                        default: true
+                        description: Open allows joining without whitelist account.
+                          If false, admins must manually create accounts.
+                        type: boolean
+                      PingLimit:
+                        default: 400
+                        description: PingLimit is max ping in ms before kick. Set
+                          to 100 to disable.
+                        format: int32
+                        maximum: 2147483647
+                        minimum: 100
+                        type: integer
+                    type: object
+                  pvp:
+                    description: PVP contains PVP-specific settings
+                    properties:
+                      PVP:
+                        default: true
+                        description: PVP enables player vs player combat
+                        type: boolean
+                      PVPFirearmDamageModifier:
+                        default: 50
+                        description: PVPFirearmDamageModifier affects firearm damage
+                        maximum: 500
+                        minimum: 0
+                        type: number
+                      PVPMeleeDamageModifier:
+                        default: 30
+                        description: PVPMeleeDamageModifier affects melee damage
+                        maximum: 500
+                        minimum: 0
+                        type: number
+                      PVPMeleeWhileHitReaction:
+                        default: false
+                        description: PVPMeleeWhileHitReaction enables hit reactions
+                        type: boolean
+                      SafetyCooldownTimer:
+                        default: 3
+                        description: SafetyCooldownTimer is cooldown between safety
+                          toggles
+                        format: int32
+                        maximum: 1000
+                        minimum: 0
+                        type: integer
+                      SafetySystem:
+                        default: true
+                        description: SafetySystem enables PVP safety system. When
+                          false, players can hurt each other anytime if PVP enabled.
+                        type: boolean
+                      SafetyToggleTimer:
+                        default: 2
+                        description: SafetyToggleTimer is delay for toggling safety
+                        format: int32
+                        maximum: 1000
+                        minimum: 0
+                        type: integer
+                      ShowSafety:
+                        default: true
+                        description: ShowSafety shows safety status with skull icon
+                        type: boolean
+                    type: object
+                  safehouse:
+                    description: Safehouse contains safehouse-related settings
+                    properties:
+                      AdminSafehouse:
+                        default: false
+                        description: AdminSafehouse enables admin safehouses
+                        type: boolean
+                      DisableSafehouseWhenPlayerConnected:
+                        default: false
+                        description: DisableSafehouseWhenPlayerConnected disables
+                          when owner online
+                        type: boolean
+                      PlayerSafehouse:
+                        default: false
+                        description: PlayerSafehouse enables player safehouses
+                        type: boolean
+                      SafeHouseRemovalTime:
+                        default: 144
+                        description: SafeHouseRemovalTime is hours before removal
+                          when not visited
+                        format: int32
+                        maximum: 2147483647
+                        minimum: 0
+                        type: integer
+                      SafehouseAllowFire:
+                        default: true
+                        description: SafehouseAllowFire allows fire in safehouses
+                        type: boolean
+                      SafehouseAllowLoot:
+                        default: true
+                        description: SafehouseAllowLoot allows looting in safehouses
+                        type: boolean
+                      SafehouseAllowNonResidential:
+                        default: false
+                        description: SafehouseAllowNonResidential allows non-residential
+                          safehouses
+                        type: boolean
+                      SafehouseAllowRespawn:
+                        default: false
+                        description: SafehouseAllowRespawn allows respawning in safehouses
+                        type: boolean
+                      SafehouseAllowTrepass:
+                        default: true
+                        description: SafehouseAllowTrepass allows entering others'
+                          safehouses
+                        type: boolean
+                      SafehouseDaySurvivedToClaim:
+                        default: 0
+                        description: SafehouseDaySurvivedToClaim is days before claiming
+                        format: int32
+                        maximum: 2147483647
+                        minimum: 0
+                        type: integer
+                    type: object
+                  steam:
+                    description: Steam contains Steam-specific settings and anti-cheat
+                    properties:
+                      SteamScoreboard:
+                        default: "true"
+                        description: SteamScoreboard controls visibility of Steam
+                          names/avatars. Can be "true" (visible to everyone), "false"
+                          (visible to no one), or "admin" (visible to only admins)
+                        type: string
+                    type: object
+                  workshopMods:
+                    description: |-
+                      WorkshopMods contains Steam Workshop mods in a structured format.
+                      This is the recommended way to specify mods for the zomboid-operator, as it provides better organization and validation.
+                    items:
+                      description: |-
+                        WorkshopMod pairs a mod's loading ID with its Steam Workshop ID,
+                        providing a more structured way to specify mods compared to the classic parallel lists
+                      properties:
+                        modID:
+                          description: ModID is the mod loading ID found in Steam/steamapps/workshop/modID/mods/modName/info.txt
+                          type: string
+                        workshopID:
+                          description: WorkshopID is the Steam Workshop ID used to
+                            download the mod
+                          type: string
+                      required:
+                      - modID
+                      - workshopID
+                      type: object
+                    type: array
+                type: object
+              settingsLastObserved:
+                description: SettingsLastObserved is the timestamp of when we last
+                  successfully read the server's settings
+                format: date-time
+                type: string
             required:
             - ready
             type: object

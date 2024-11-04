@@ -141,9 +141,9 @@ AntiCheatProtectionType24ThresholdMultiplier=6.0
 
 var _ = Describe("Project Zomboid server.ini handling", func() {
 	var (
-		settings             zomboidv1.ZomboidServerSpec
+		settings             zomboidv1.ZomboidSettings
 		generatedINI         string
-		roundTrippedSettings zomboidv1.ZomboidServerSpec
+		roundTrippedSettings zomboidv1.ZomboidSettings
 	)
 
 	BeforeEach(func() {

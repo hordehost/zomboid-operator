@@ -24,75 +24,9 @@ type ZomboidServerSpec struct {
 	// +optional
 	Password *corev1.SecretKeySelector `json:"password,omitempty"`
 
-	// Identity contains settings about how the server is identified and accessed
+	// Settings contains the server's current settings
 	// +optional
-	Identity Identity `json:"identity"`
-
-	// Player contains player management settings
-	// +optional
-	Player Player `json:"player"`
-
-	// Map contains map configuration settings
-	// +optional
-	Map Map `json:"map"`
-
-	// Mods contains mod configuration settings using the classic format of parallel mod/workshop lists.
-	// This is the traditional way to specify mods in the server.ini but is less structured. Consider using WorkshopMods instead.
-	// +optional
-	Mods Mods `json:"mods"`
-
-	// WorkshopMods contains Steam Workshop mods in a structured format.
-	// This is the recommended way to specify mods for the zomboid-operator, as it provides better organization and validation.
-	// +optional
-	WorkshopMods []WorkshopMod `json:"workshopMods"`
-
-	// Backup contains backup-related server settings
-	// +optional
-	Backup Backup `json:"backup"`
-
-	// Logging contains logging configuration settings
-	// +optional
-	Logging Logging `json:"logging"`
-
-	// Moderation contains admin and moderation settings
-	// +optional
-	Moderation Moderation `json:"moderation"`
-
-	// Steam contains Steam-specific settings and anti-cheat
-	// +optional
-	Steam Steam `json:"steam"`
-
-	// Discord contains Discord integration settings
-	// +optional
-	Discord Discord `json:"discord"`
-
-	// Communication contains chat and VOIP settings
-	// +optional
-	Communication Communication `json:"communication"`
-
-	// Gameplay contains general gameplay rules and settings
-	// +optional
-	Gameplay Gameplay `json:"gameplay"`
-
-	// PVP contains PVP-specific settings
-	// +optional
-	PVP PVP `json:"pvp"`
-
-	// Loot contains loot-related settings
-	// +optional
-	Loot Loot `json:"loot"`
-
-	// Safehouse contains safehouse-related settings
-	// +optional
-	Safehouse Safehouse `json:"safehouse"`
-
-	// Faction contains faction-related settings
-	// +optional
-	Faction Faction `json:"faction"`
-
-	// AntiCheat configures the anti-cheat protection system
-	// +optional
-	AntiCheat AntiCheat `json:"antiCheat"`
+	Settings ZomboidSettings `json:"settings,omitempty"`
 }
 
 // Storage defines the persistent storage configuration for the Zomboid server.
@@ -120,13 +54,21 @@ type ZomboidServerStatus struct {
 	// Ready indicates whether the server is ready to accept players
 	Ready bool `json:"ready"`
 
+	// SettingsLastObserved is the timestamp of when we last successfully read the server's settings
+	// +optional
+	SettingsLastObserved *metav1.Time `json:"settingsLastObserved,omitempty"`
+
+	// Settings contains the server's current settings
+	// +optional
+	Settings ZomboidSettings `json:"settings,omitempty"`
+
 	// Conditions represent the latest available observations of the ZomboidServer's current state.
 	// +optional
 	// +patchMergeKey=type
 	// +patchStrategy=merge
 	// +listType=map
 	// +listMapKey=type
-	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
+	Conditions []metav1.Condition `json:"conditions," patchStrategy:"merge" patchMergeKey:"type"`
 }
 
 // Condition Types

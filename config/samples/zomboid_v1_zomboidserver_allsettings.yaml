@@ -30,148 +30,149 @@ spec:
   password:
     name: zomboid-passwords
     key: server-password
-  identity:
-    Public: true
-    PublicName: "Horde Host PZ Server"
-    PublicDescription: "A fully configured Project Zomboid server\nManaged by zomboid-operator"
-    ResetID: 12345678
-    ServerPlayerID: 87654321
-  player:
-    MaxPlayers: 16
-    PingLimit: 200
-    Open: true
-    AutoCreateUserInWhiteList: true
-    DropOffWhiteListAfterDeath: true
-    MaxAccountsPerUser: 2
-    AllowCoop: true
-    AllowNonAsciiUsername: true
-    DenyLoginOnOverloadedServer: true
-    LoginQueueEnabled: true
-    LoginQueueConnectTimeout: 120
-  map:
-    Map: "Riverside, KY"
-  mods:
-    WorkshopItems: "2392709985;2478768005"
-    Mods: "Authentic Z;Brita"
-  workshopMods:
-    - modID: "AuthenticZ"
-      workshopID: "2392709985"
-    - modID: "Brita_2"
-      workshopID: "2478768005"
-  backup:
-    SaveWorldEveryMinutes: 30
-    BackupsCount: 10
-    BackupsOnStart: true
-    BackupsOnVersionChange: true
-    BackupsPeriod: 60
-  logging:
-    PerkLogs: true
-    ClientCommandFilter: "-vehicle.*;+vehicle.damageWindow"
-    ClientActionLogs: "ISEnterVehicle;ISExitVehicle"
-  moderation:
-    DisableRadioStaff: true
-    DisableRadioAdmin: true
-    DisableRadioGM: true
-    DisableRadioOverseer: true
-    DisableRadioModerator: true
-    DisableRadioInvisible: true
-    BanKickGlobalSound: true
-  steam:
-    SteamScoreboard: "admin"
-  discord:
-    DiscordEnable: true
-    DiscordToken: "your-discord-bot-token"
-    DiscordChannel: "zomboid-chat"
-    DiscordChannelID: "123456789012345678"
-  communication:
-    GlobalChat: true
-    ChatStreams: "s,r,a,w,y,sh,f,all"
-    ServerWelcomeMessage: "Welcome to our server!\n<RGB:1,0,0>Enjoy your stay!"
-    VoiceEnable: true
-    VoiceMinDistance: 5.0
-    VoiceMaxDistance: 150.0
-    Voice3D: true
-  gameplay:
-    PauseEmpty: false
-    DisplayUserName: true
-    ShowFirstAndLastName: true
-    SpawnPoint: "11500,8900,0"
-    SpawnItems: "Base.Axe,Base.Bag_BigHikingBag"
-    NoFire: true
-    AnnounceDeath: true
-    MinutesPerPage: 2.0
-    AllowDestructionBySledgehammer: true
-    SledgehammerOnlyInSafehouse: true
-    SleepAllowed: true
-    SleepNeeded: true
-    KnockedDownAllowed: true
-    SneakModeHideFromOtherPlayers: true
-    SpeedLimit: 60.0
-    PlayerRespawnWithSelf: true
-    PlayerRespawnWithOther: true
-    FastForwardMultiplier: 30.0
-  pvp:
-    PVP: true
-    SafetySystem: true
-    ShowSafety: true
-    SafetyToggleTimer: 5
-    SafetyCooldownTimer: 5
-    PVPMeleeDamageModifier: 20.0
-    PVPFirearmDamageModifier: 30.0
-    PVPMeleeWhileHitReaction: true
-  safehouse:
-    PlayerSafehouse: true
-    AdminSafehouse: true
-    SafehouseAllowTrepass: false
-    SafehouseAllowFire: false
-    SafehouseAllowLoot: false
-    SafehouseAllowRespawn: true
-    SafehouseDaySurvivedToClaim: 3
-    SafeHouseRemovalTime: 72
-    SafehouseAllowNonResidential: true
-    DisableSafehouseWhenPlayerConnected: true
-  faction:
-    Faction: true
-    FactionDaySurvivedToCreate: 5
-    FactionPlayersRequiredForTag: 3
-  loot:
-    HoursForLootRespawn: 48
-    MaxItemsForLootRespawn: 10
-    ConstructionPreventsLootRespawn: true
-    ItemNumbersLimitPerContainer: 1000
-    TrashDeleteAll: true
-  antiCheat:
-    DoLuaChecksum: true
-    KickFastPlayers: true
-    AntiCheatProtectionType1: true
-    AntiCheatProtectionType2: true
-    AntiCheatProtectionType3: true
-    AntiCheatProtectionType4: true
-    AntiCheatProtectionType5: true
-    AntiCheatProtectionType6: true
-    AntiCheatProtectionType7: true
-    AntiCheatProtectionType8: true
-    AntiCheatProtectionType9: true
-    AntiCheatProtectionType10: true
-    AntiCheatProtectionType11: true
-    AntiCheatProtectionType12: true
-    AntiCheatProtectionType13: true
-    AntiCheatProtectionType14: true
-    AntiCheatProtectionType15: true
-    AntiCheatProtectionType16: true
-    AntiCheatProtectionType17: true
-    AntiCheatProtectionType18: true
-    AntiCheatProtectionType19: true
-    AntiCheatProtectionType20: true
-    AntiCheatProtectionType21: true
-    AntiCheatProtectionType22: true
-    AntiCheatProtectionType23: true
-    AntiCheatProtectionType24: true
-    AntiCheatProtectionType2ThresholdMultiplier: 2.0
-    AntiCheatProtectionType3ThresholdMultiplier: 2.0
-    AntiCheatProtectionType4ThresholdMultiplier: 2.0
-    AntiCheatProtectionType9ThresholdMultiplier: 2.0
-    AntiCheatProtectionType15ThresholdMultiplier: 2.0
-    AntiCheatProtectionType20ThresholdMultiplier: 2.0
-    AntiCheatProtectionType22ThresholdMultiplier: 2.0
-    AntiCheatProtectionType24ThresholdMultiplier: 4.0
+  settings:
+    identity:
+      Public: true
+      PublicName: "Horde Host PZ Server"
+      PublicDescription: "A fully configured Project Zomboid server\nManaged by zomboid-operator"
+      ResetID: 12345678
+      ServerPlayerID: 87654321
+    player:
+      MaxPlayers: 16
+      PingLimit: 200
+      Open: true
+      AutoCreateUserInWhiteList: true
+      DropOffWhiteListAfterDeath: true
+      MaxAccountsPerUser: 2
+      AllowCoop: true
+      AllowNonAsciiUsername: true
+      DenyLoginOnOverloadedServer: true
+      LoginQueueEnabled: true
+      LoginQueueConnectTimeout: 120
+    map:
+      Map: "Riverside, KY"
+    mods:
+      WorkshopItems: "2392709985;2478768005"
+      Mods: "Authentic Z;Brita"
+    workshopMods:
+      - modID: "AuthenticZ"
+        workshopID: "2392709985"
+      - modID: "Brita_2"
+        workshopID: "2478768005"
+    backup:
+      SaveWorldEveryMinutes: 30
+      BackupsCount: 10
+      BackupsOnStart: true
+      BackupsOnVersionChange: true
+      BackupsPeriod: 60
+    logging:
+      PerkLogs: true
+      ClientCommandFilter: "-vehicle.*;+vehicle.damageWindow"
+      ClientActionLogs: "ISEnterVehicle;ISExitVehicle"
+    moderation:
+      DisableRadioStaff: true
+      DisableRadioAdmin: true
+      DisableRadioGM: true
+      DisableRadioOverseer: true
+      DisableRadioModerator: true
+      DisableRadioInvisible: true
+      BanKickGlobalSound: true
+    steam:
+      SteamScoreboard: "admin"
+    discord:
+      DiscordEnable: true
+      DiscordToken: "your-discord-bot-token"
+      DiscordChannel: "zomboid-chat"
+      DiscordChannelID: "123456789012345678"
+    communication:
+      GlobalChat: true
+      ChatStreams: "s,r,a,w,y,sh,f,all"
+      ServerWelcomeMessage: "Welcome to our server!\n<RGB:1,0,0>Enjoy your stay!"
+      VoiceEnable: true
+      VoiceMinDistance: 5.0
+      VoiceMaxDistance: 150.0
+      Voice3D: true
+    gameplay:
+      PauseEmpty: false
+      DisplayUserName: true
+      ShowFirstAndLastName: true
+      SpawnPoint: "11500,8900,0"
+      SpawnItems: "Base.Axe,Base.Bag_BigHikingBag"
+      NoFire: true
+      AnnounceDeath: true
+      MinutesPerPage: 2.0
+      AllowDestructionBySledgehammer: true
+      SledgehammerOnlyInSafehouse: true
+      SleepAllowed: true
+      SleepNeeded: true
+      KnockedDownAllowed: true
+      SneakModeHideFromOtherPlayers: true
+      SpeedLimit: 60.0
+      PlayerRespawnWithSelf: true
+      PlayerRespawnWithOther: true
+      FastForwardMultiplier: 30.0
+    pvp:
+      PVP: true
+      SafetySystem: true
+      ShowSafety: true
+      SafetyToggleTimer: 5
+      SafetyCooldownTimer: 5
+      PVPMeleeDamageModifier: 20.0
+      PVPFirearmDamageModifier: 30.0
+      PVPMeleeWhileHitReaction: true
+    safehouse:
+      PlayerSafehouse: true
+      AdminSafehouse: true
+      SafehouseAllowTrepass: false
+      SafehouseAllowFire: false
+      SafehouseAllowLoot: false
+      SafehouseAllowRespawn: true
+      SafehouseDaySurvivedToClaim: 3
+      SafeHouseRemovalTime: 72
+      SafehouseAllowNonResidential: true
+      DisableSafehouseWhenPlayerConnected: true
+    faction:
+      Faction: true
+      FactionDaySurvivedToCreate: 5
+      FactionPlayersRequiredForTag: 3
+    loot:
+      HoursForLootRespawn: 48
+      MaxItemsForLootRespawn: 10
+      ConstructionPreventsLootRespawn: true
+      ItemNumbersLimitPerContainer: 1000
+      TrashDeleteAll: true
+    antiCheat:
+      DoLuaChecksum: true
+      KickFastPlayers: true
+      AntiCheatProtectionType1: true
+      AntiCheatProtectionType2: true
+      AntiCheatProtectionType3: true
+      AntiCheatProtectionType4: true
+      AntiCheatProtectionType5: true
+      AntiCheatProtectionType6: true
+      AntiCheatProtectionType7: true
+      AntiCheatProtectionType8: true
+      AntiCheatProtectionType9: true
+      AntiCheatProtectionType10: true
+      AntiCheatProtectionType11: true
+      AntiCheatProtectionType12: true
+      AntiCheatProtectionType13: true
+      AntiCheatProtectionType14: true
+      AntiCheatProtectionType15: true
+      AntiCheatProtectionType16: true
+      AntiCheatProtectionType17: true
+      AntiCheatProtectionType18: true
+      AntiCheatProtectionType19: true
+      AntiCheatProtectionType20: true
+      AntiCheatProtectionType21: true
+      AntiCheatProtectionType22: true
+      AntiCheatProtectionType23: true
+      AntiCheatProtectionType24: true
+      AntiCheatProtectionType2ThresholdMultiplier: 2.0
+      AntiCheatProtectionType3ThresholdMultiplier: 2.0
+      AntiCheatProtectionType4ThresholdMultiplier: 2.0
+      AntiCheatProtectionType9ThresholdMultiplier: 2.0
+      AntiCheatProtectionType15ThresholdMultiplier: 2.0
+      AntiCheatProtectionType20ThresholdMultiplier: 2.0
+      AntiCheatProtectionType22ThresholdMultiplier: 2.0
+      AntiCheatProtectionType24ThresholdMultiplier: 4.0

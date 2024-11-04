@@ -133,6 +133,7 @@ func main() {
 	if err = (&controller.ZomboidServerReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
+		Config: mgr.GetConfig(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ZomboidServer")
 		os.Exit(1)
