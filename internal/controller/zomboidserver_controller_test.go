@@ -301,6 +301,33 @@ var _ = Describe("ZomboidServer Controller", func() {
 						Expect(env.Name).NotTo(Equal("ZOMBOID_SERVER_PASSWORD"))
 					}
 				})
+
+				It("should set the admin password hash annotation", func() {
+					Expect(deployment.Spec.Template.Annotations["secret/admin"]).To(
+						Equal("a0052321048e12ed3bf3e2d264e41762a0547fceacfb97c04ed058c0edc39a8b"),
+					)
+				})
+
+				When("server password is set", func() {
+					It("should set both admin and server password hash annotations", func() {
+						Expect(deployment.Spec.Template.Annotations["secret/server"]).To(
+							Equal("32b7f0192280ba7f3529cf2cd5e381ab68db4a50acf636b7f32524364a1e98cc"),
+						)
+					})
+				})
+
+				When("server password is not set", func() {
+					It("should only set admin password hash annotation", func() {
+						zomboidServer.Spec.Password = nil
+						updateAndReconcile(ctx, k8sClient, reconciler, zomboidServer)
+
+						updatedDeployment := &appsv1.Deployment{}
+						Expect(k8sClient.Get(ctx, zomboidServerName, updatedDeployment)).To(Succeed())
+
+						Expect(updatedDeployment.Spec.Template.Annotations["secret/admin"]).NotTo(BeEmpty())
+						Expect(updatedDeployment.Spec.Template.Annotations["secret/server"]).To(BeEmpty())
+					})
+				})
 			})
 		})
 

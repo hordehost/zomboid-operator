@@ -2,16 +2,21 @@ package controller
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -78,6 +83,9 @@ func (r *ZomboidServerReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.SetControllerReference(zomboidServer, pvc, r.Scheme)
 	})
 	if err != nil {
+		if errors.IsConflict(err) {
+			return ctrl.Result{Requeue: true}, nil
+		}
 		meta.SetStatusCondition(&zomboidServer.Status.Conditions, metav1.Condition{
 			Type:    zomboidv1.TypeInfrastructureReady,
 			Status:  metav1.ConditionFalse,
@@ -124,6 +132,36 @@ func (r *ZomboidServerReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			})
 		}
 
+		// Get admin password secret
+		adminSecret := &corev1.Secret{}
+		err := r.Get(ctx, client.ObjectKey{
+			Namespace: zomboidServer.Namespace,
+			Name:      zomboidServer.Spec.Administrator.Password.Name,
+		}, adminSecret)
+		if err != nil {
+			return fmt.Errorf("failed to get admin password secret: %w", err)
+		}
+		adminHash := sha256.Sum256(adminSecret.Data[zomboidServer.Spec.Administrator.Password.Key])
+
+		// Initialize annotations map
+		annotations := map[string]string{
+			"secret/admin": hex.EncodeToString(adminHash[:]),
+		}
+
+		// Get server password secret if it exists
+		if zomboidServer.Spec.Password != nil {
+			serverSecret := &corev1.Secret{}
+			err := r.Get(ctx, client.ObjectKey{
+				Namespace: zomboidServer.Namespace,
+				Name:      zomboidServer.Spec.Password.Name,
+			}, serverSecret)
+			if err != nil {
+				return fmt.Errorf("failed to get server password secret: %w", err)
+			}
+			serverHash := sha256.Sum256(serverSecret.Data[zomboidServer.Spec.Password.Key])
+			annotations["secret/server"] = hex.EncodeToString(serverHash[:])
+		}
+
 		deployment.Spec = appsv1.DeploymentSpec{
 			Replicas: ptr.To(int32(1)),
 			Strategy: appsv1.DeploymentStrategy{
@@ -139,6 +177,7 @@ func (r *ZomboidServerReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 					Labels: map[string]string{
 						"app": zomboidServer.Name,
 					},
+					Annotations: annotations,
 				},
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
@@ -204,6 +243,9 @@ func (r *ZomboidServerReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.SetControllerReference(zomboidServer, deployment, r.Scheme)
 	})
 	if err != nil {
+		if errors.IsConflict(err) {
+			return ctrl.Result{Requeue: true}, nil
+		}
 		meta.SetStatusCondition(&zomboidServer.Status.Conditions, metav1.Condition{
 			Type:    zomboidv1.TypeInfrastructureReady,
 			Status:  metav1.ConditionFalse,
@@ -251,5 +293,34 @@ func (r *ZomboidServerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Named("zomboidserver").
 		Owns(&corev1.PersistentVolumeClaim{}).
 		Owns(&appsv1.Deployment{}).
+		// Watch Secrets that are referenced by ZomboidServer resources
+		Watches(
+			&corev1.Secret{},
+			handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, obj client.Object) []reconcile.Request {
+				secret := obj.(*corev1.Secret)
+
+				zomboidList := &zomboidv1.ZomboidServerList{}
+				if err := r.List(ctx, zomboidList); err != nil {
+					return nil
+				}
+
+				var requests []reconcile.Request
+				for _, zs := range zomboidList.Items {
+					request := reconcile.Request{
+						NamespacedName: types.NamespacedName{
+							Name:      zs.Name,
+							Namespace: zs.Namespace,
+						},
+					}
+
+					if zs.Namespace == secret.Namespace &&
+						(zs.Spec.Administrator.Password.LocalObjectReference.Name == secret.Name ||
+							(zs.Spec.Password != nil && zs.Spec.Password.LocalObjectReference.Name == secret.Name)) {
+						requests = append(requests, request)
+					}
+				}
+				return requests
+			}),
+		).
 		Complete(r)
 }
