@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"time"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -136,6 +137,18 @@ func (r *ZomboidServerReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			Reason:             zomboidv1.ReasonServerReady,
 			Message:            "Server is ready to accept players",
 		})
+	}
+
+	if !zomboidServer.Status.Ready {
+		return ctrl.Result{RequeueAfter: 1 * time.Second}, nil
+	}
+
+	result, err = r.reconcileSettings(ctx, zomboidServer)
+	if result != nil {
+		return *result, err
+	}
+	if err != nil {
+		return ctrl.Result{}, err
 	}
 
 	return ctrl.Result{}, nil
@@ -464,4 +477,16 @@ func (r *ZomboidServerReconciler) reconcileGameService(ctx context.Context, zomb
 	})
 
 	return err
+}
+
+func (r *ZomboidServerReconciler) reconcileSettings(ctx context.Context, zomboidServer *zomboidv1.ZomboidServer) (*ctrl.Result, error) {
+	if zomboidServer == nil {
+		return nil, nil
+	}
+
+	logger := log.FromContext(ctx)
+
+	logger.Info("TODO: Reconcile settings")
+
+	return nil, nil
 }

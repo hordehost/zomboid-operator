@@ -100,7 +100,6 @@ func GenerateServerINI(settings zomboidv1.ZomboidServerSpec) string {
 	writeString(&sb, "Voice3D", settings.Communication.Voice3D)
 
 	// Gameplay settings
-	writeString(&sb, "PVP", settings.Gameplay.PVP)
 	writeString(&sb, "PauseEmpty", settings.Gameplay.PauseEmpty)
 	writeString(&sb, "DisplayUserName", settings.Gameplay.DisplayUserName)
 	writeString(&sb, "ShowFirstAndLastName", settings.Gameplay.ShowFirstAndLastName)
@@ -121,6 +120,7 @@ func GenerateServerINI(settings zomboidv1.ZomboidServerSpec) string {
 	writeString(&sb, "FastForwardMultiplier", settings.Gameplay.FastForwardMultiplier)
 
 	// PVP settings
+	writeString(&sb, "PVP", settings.PVP.PVP)
 	writeString(&sb, "SafetySystem", settings.PVP.SafetySystem)
 	writeString(&sb, "ShowSafety", settings.PVP.ShowSafety)
 	writeString(&sb, "SafetyToggleTimer", settings.PVP.SafetyToggleTimer)
@@ -372,8 +372,6 @@ func parseSettingValue(settings *zomboidv1.ZomboidServerSpec, key, value string)
 		settings.Communication.Voice3D = parseBool(value)
 
 	// Gameplay settings
-	case "PVP":
-		settings.Gameplay.PVP = parseBool(value)
 	case "PauseEmpty":
 		settings.Gameplay.PauseEmpty = parseBool(value)
 	case "DisplayUserName":
@@ -412,6 +410,8 @@ func parseSettingValue(settings *zomboidv1.ZomboidServerSpec, key, value string)
 		settings.Gameplay.FastForwardMultiplier = parseFloat32(value)
 
 	// PVP settings
+	case "PVP":
+		settings.PVP.PVP = parseBool(value)
 	case "SafetySystem":
 		settings.PVP.SafetySystem = parseBool(value)
 	case "ShowSafety":

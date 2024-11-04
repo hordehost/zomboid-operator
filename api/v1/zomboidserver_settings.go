@@ -301,11 +301,6 @@ type Communication struct {
 // Gameplay controls fundamental aspects of the player experience including
 // PvP, time progression, player visibility, spawning, movement, and sleep mechanics
 type Gameplay struct {
-	// PVP enables player vs player combat
-	// +kubebuilder:default=true
-	// +optional
-	PVP *bool `json:"PVP,omitempty"`
-
 	// PauseEmpty pauses time when no players online
 	// +kubebuilder:default=true
 	// +optional
@@ -405,6 +400,11 @@ type Gameplay struct {
 // PVP fine-tunes player versus player combat with safety systems,
 // damage modifiers, and combat mechanics
 type PVP struct {
+	// PVP enables player vs player combat
+	// +kubebuilder:default=true
+	// +optional
+	PVP *bool `json:"PVP,omitempty"`
+
 	// SafetySystem enables PVP safety system. When false, players can hurt each other anytime if PVP enabled.
 	// +kubebuilder:default=true
 	// +optional

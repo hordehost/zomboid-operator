@@ -352,10 +352,6 @@ spec:
                     default: false
                     description: NoFire disables all forms of fire except campfires
                     type: boolean
-                  PVP:
-                    default: true
-                    description: PVP enables player vs player combat
-                    type: boolean
                   PauseEmpty:
                     default: true
                     description: PauseEmpty pauses time when no players online
@@ -648,6 +644,10 @@ spec:
               pvp:
                 description: PVP contains PVP-specific settings
                 properties:
+                  PVP:
+                    default: true
+                    description: PVP enables player vs player combat
+                    type: boolean
                   PVPFirearmDamageModifier:
                     default: 50
                     description: PVPFirearmDamageModifier affects firearm damage

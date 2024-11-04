@@ -145,9 +145,8 @@ var _ = Describe("ZomboidServer Controller", func() {
 
 			Expect(k8sClient.Create(ctx, zomboidServer)).To(Succeed())
 
-			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: zomboidServerName})
+			_, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: zomboidServerName})
 			Expect(err).NotTo(HaveOccurred())
-			Expect(result).To(Equal(ctrl.Result{}))
 
 			Expect(k8sClient.Get(ctx, zomboidServerName, zomboidServer)).To(Succeed())
 		})
@@ -483,10 +482,9 @@ var _ = Describe("ZomboidServer Controller", func() {
 
 func updateAndReconcile(ctx context.Context, k8sClient client.Client, reconciler *ZomboidServerReconciler, obj *zomboidv1.ZomboidServer) {
 	Expect(k8sClient.Update(ctx, obj)).To(Succeed())
-	result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{
+	_, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{
 		Name:      obj.Name,
 		Namespace: obj.Namespace,
 	}})
 	Expect(err).NotTo(HaveOccurred())
-	Expect(result).To(Equal(ctrl.Result{}))
 }

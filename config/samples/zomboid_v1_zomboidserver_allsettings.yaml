@@ -92,7 +92,6 @@ spec:
     VoiceMaxDistance: 150.0
     Voice3D: true
   gameplay:
-    PVP: true
     PauseEmpty: false
     DisplayUserName: true
     ShowFirstAndLastName: true
@@ -112,6 +111,7 @@ spec:
     PlayerRespawnWithOther: true
     FastForwardMultiplier: 30.0
   pvp:
+    PVP: true
     SafetySystem: true
     ShowSafety: true
     SafetyToggleTimer: 5
