@@ -188,6 +188,19 @@ func (r *ZomboidServerReconciler) reconcileInfrastructure(ctx context.Context, z
 		})
 		return nil, err
 	}
+
+	if err := r.reconcileGameService(ctx, zomboidServer); err != nil {
+		if errors.IsConflict(err) {
+			return &ctrl.Result{Requeue: true}, nil
+		}
+		meta.SetStatusCondition(&zomboidServer.Status.Conditions, metav1.Condition{
+			Type:    zomboidv1.TypeInfrastructureReady,
+			Status:  metav1.ConditionFalse,
+			Reason:  zomboidv1.ReasonMissingGameService,
+			Message: fmt.Sprintf("Failed to reconcile Game Service: %v", err),
+		})
+		return nil, err
+	}
 	return nil, nil
 }
 
@@ -358,6 +371,16 @@ func (r *ZomboidServerReconciler) reconcileDeployment(ctx context.Context, zombo
 									ContainerPort: 27015,
 									Protocol:      corev1.ProtocolTCP,
 								},
+								{
+									Name:          "steam",
+									ContainerPort: 16261,
+									Protocol:      corev1.ProtocolUDP,
+								},
+								{
+									Name:          "raknet",
+									ContainerPort: 16262,
+									Protocol:      corev1.ProtocolUDP,
+								},
 							},
 						},
 					},
@@ -404,6 +427,40 @@ func (r *ZomboidServerReconciler) reconcileRCONService(ctx context.Context, zomb
 			},
 		}
 		return ctrl.SetControllerReference(zomboidServer, rconService, r.Scheme)
+	})
+
+	return err
+}
+
+func (r *ZomboidServerReconciler) reconcileGameService(ctx context.Context, zomboidServer *zomboidv1.ZomboidServer) error {
+	gameService := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      zomboidServer.Name,
+			Namespace: zomboidServer.Namespace,
+		},
+	}
+
+	_, err := controllerutil.CreateOrUpdate(ctx, r.Client, gameService, func() error {
+		labels := commonLabels(zomboidServer)
+		gameService.Labels = labels
+		gameService.Spec = corev1.ServiceSpec{
+			Selector: labels,
+			Ports: []corev1.ServicePort{
+				{
+					Name:       "steam",
+					Port:       16261,
+					Protocol:   corev1.ProtocolUDP,
+					TargetPort: intstr.FromString("steam"),
+				},
+				{
+					Name:       "raknet",
+					Port:       16262,
+					Protocol:   corev1.ProtocolUDP,
+					TargetPort: intstr.FromString("raknet"),
+				},
+			},
+		}
+		return ctrl.SetControllerReference(zomboidServer, gameService, r.Scheme)
 	})
 
 	return err

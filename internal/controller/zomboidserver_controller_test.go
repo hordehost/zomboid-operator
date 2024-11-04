@@ -399,6 +399,53 @@ var _ = Describe("ZomboidServer Controller", func() {
 					Expect(deployment.Spec.Template.Labels).To(Equal(expectedLabels))
 				})
 			})
+
+			When("creating the Game Service", func() {
+				var gameService *corev1.Service
+
+				BeforeEach(func() {
+					gameService = &corev1.Service{}
+					Expect(k8sClient.Get(ctx, types.NamespacedName{
+						Name:      zomboidServer.Name,
+						Namespace: zomboidServer.Namespace,
+					}, gameService)).To(Succeed())
+				})
+
+				It("should create the Game service with correct ports", func() {
+					Expect(gameService.Spec.Ports).To(ConsistOf(
+						corev1.ServicePort{
+							Name:       "steam",
+							Port:       16261,
+							Protocol:   corev1.ProtocolUDP,
+							TargetPort: intstr.FromString("steam"),
+						},
+						corev1.ServicePort{
+							Name:       "raknet",
+							Port:       16262,
+							Protocol:   corev1.ProtocolUDP,
+							TargetPort: intstr.FromString("raknet"),
+						},
+					))
+				})
+
+				It("should set the correct selector", func() {
+					expectedLabels := map[string]string{
+						"app.kubernetes.io/name":       "zomboidserver",
+						"app.kubernetes.io/instance":   zomboidServer.Name,
+						"app.kubernetes.io/managed-by": "zomboid-operator",
+					}
+					Expect(gameService.Spec.Selector).To(Equal(expectedLabels))
+				})
+
+				It("should set the correct labels", func() {
+					expectedLabels := map[string]string{
+						"app.kubernetes.io/name":       "zomboidserver",
+						"app.kubernetes.io/instance":   zomboidServer.Name,
+						"app.kubernetes.io/managed-by": "zomboid-operator",
+					}
+					Expect(gameService.Labels).To(Equal(expectedLabels))
+				})
+			})
 		})
 
 		Context("Updating an existing ZomboidServer", func() {
