@@ -5,26 +5,31 @@ package v1
 type Identity struct {
 	// Public determines if server is visible in in-game browser. Note: Steam-enabled servers are always visible in Steam browser.
 	// +kubebuilder:default=false
-	Public bool `json:"Public"`
+	// +optional
+	Public *bool `json:"Public,omitempty"`
 
 	// PublicName is the server name shown in browsers
 	// +kubebuilder:default="My PZ Server"
-	PublicName string `json:"PublicName"`
+	// +optional
+	PublicName *string `json:"PublicName,omitempty"`
 
 	// PublicDescription is the server description shown in browsers. Use \n for newlines.
-	PublicDescription string `json:"PublicDescription"`
+	// +optional
+	PublicDescription *string `json:"PublicDescription,omitempty"`
 
 	// ResetID determines if server has undergone soft-reset. If this number doesn't match client, client must create new character.
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:validation:Maximum=2147483647
 	// +kubebuilder:default=485871306
-	ResetID int32 `json:"ResetID"`
+	// +optional
+	ResetID *int32 `json:"ResetID,omitempty"`
 
 	// ServerPlayerID identifies characters from different servers. Used with ResetID.
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:validation:Maximum=2147483647
 	// +kubebuilder:default=63827612
-	ServerPlayerID int32 `json:"ServerPlayerID"`
+	// +optional
+	ServerPlayerID *int32 `json:"ServerPlayerID,omitempty"`
 }
 
 // Player manages the core multiplayer experience including server capacity, connection requirements,
@@ -34,53 +39,64 @@ type Player struct {
 	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:validation:Maximum=100
 	// +kubebuilder:default=32
-	MaxPlayers int32 `json:"MaxPlayers"`
+	// +optional
+	MaxPlayers *int32 `json:"MaxPlayers,omitempty"`
 
 	// PingLimit is max ping in ms before kick. Set to 100 to disable.
 	// +kubebuilder:validation:Minimum=100
 	// +kubebuilder:validation:Maximum=2147483647
 	// +kubebuilder:default=400
-	PingLimit int32 `json:"PingLimit"`
+	// +optional
+	PingLimit *int32 `json:"PingLimit,omitempty"`
 
 	// Open allows joining without whitelist account. If false, admins must manually create accounts.
 	// +kubebuilder:default=true
-	Open bool `json:"Open"`
+	// +optional
+	Open *bool `json:"Open,omitempty"`
 
 	// AutoCreateUserInWhiteList adds unknown users to whitelist. Only for Open=true servers.
 	// +kubebuilder:default=false
-	AutoCreateUserInWhiteList bool `json:"AutoCreateUserInWhiteList"`
+	// +optional
+	AutoCreateUserInWhiteList *bool `json:"AutoCreateUserInWhiteList,omitempty"`
 
 	// DropOffWhiteListAfterDeath removes accounts after death. Prevents new characters after death on Open=false servers.
 	// +kubebuilder:default=false
-	DropOffWhiteListAfterDeath bool `json:"DropOffWhiteListAfterDeath"`
+	// +optional
+	DropOffWhiteListAfterDeath *bool `json:"DropOffWhiteListAfterDeath,omitempty"`
 
 	// MaxAccountsPerUser limits accounts per Steam user. Ignored when using Host button.
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:validation:Maximum=2147483647
 	// +kubebuilder:default=0
-	MaxAccountsPerUser int32 `json:"MaxAccountsPerUser"`
+	// +optional
+	MaxAccountsPerUser *int32 `json:"MaxAccountsPerUser,omitempty"`
 
 	// AllowCoop enables splitscreen/co-op play
 	// +kubebuilder:default=true
-	AllowCoop bool `json:"AllowCoop"`
+	// +optional
+	AllowCoop *bool `json:"AllowCoop,omitempty"`
 
 	// AllowNonAsciiUsername enables non-ASCII characters in usernames
 	// +kubebuilder:default=false
-	AllowNonAsciiUsername bool `json:"AllowNonAsciiUsername"`
+	// +optional
+	AllowNonAsciiUsername *bool `json:"AllowNonAsciiUsername,omitempty"`
 
 	// DenyLoginOnOverloadedServer prevents logins when server is overloaded
 	// +kubebuilder:default=true
-	DenyLoginOnOverloadedServer bool `json:"DenyLoginOnOverloadedServer"`
+	// +optional
+	DenyLoginOnOverloadedServer *bool `json:"DenyLoginOnOverloadedServer,omitempty"`
 
 	// LoginQueueEnabled enables login queue
 	// +kubebuilder:default=false
-	LoginQueueEnabled bool `json:"LoginQueueEnabled"`
+	// +optional
+	LoginQueueEnabled *bool `json:"LoginQueueEnabled,omitempty"`
 
 	// LoginQueueConnectTimeout is timeout for login queue in seconds
 	// +kubebuilder:validation:Minimum=20
 	// +kubebuilder:validation:Maximum=1200
 	// +kubebuilder:default=60
-	LoginQueueConnectTimeout int32 `json:"LoginQueueConnectTimeout"`
+	// +optional
+	LoginQueueConnectTimeout *int32 `json:"LoginQueueConnectTimeout,omitempty"`
 }
 
 // Map specifies which game world players will spawn into and explore,
@@ -88,17 +104,20 @@ type Player struct {
 type Map struct {
 	// Map is the folder name of the map mod. Found in Steam/steamapps/workshop/modID/mods/modName/media/maps/
 	// +kubebuilder:default="Muldraugh, KY"
-	Map string `json:"Map"`
+	// +optional
+	Map *string `json:"Map,omitempty"`
 }
 
 // Mods provides two parallel lists for managing Steam Workshop content:
 // one for Workshop IDs to download mods, and another for mod IDs to load them
 type Mods struct {
 	// WorkshopItems lists Workshop Mod IDs to download. Separate with semicolons.
-	WorkshopItems string `json:"WorkshopItems"`
+	// +optional
+	WorkshopItems *string `json:"WorkshopItems,omitempty"`
 
 	// Mods lists mod loading IDs. Found in Steam/steamapps/workshop/modID/mods/modName/info.txt
-	Mods string `json:"Mods"`
+	// +optional
+	Mods *string `json:"Mods,omitempty"`
 }
 
 // WorkshopMod pairs a mod's loading ID with its Steam Workshop ID,
@@ -106,11 +125,13 @@ type Mods struct {
 type WorkshopMod struct {
 	// ModID is the mod loading ID found in Steam/steamapps/workshop/modID/mods/modName/info.txt
 	// +kubebuilder:validation:Required
-	ModID string `json:"modID"`
+	// +optional
+	ModID *string `json:"modID,omitempty"`
 
 	// WorkshopID is the Steam Workshop ID used to download the mod
 	// +kubebuilder:validation:Required
-	WorkshopID string `json:"workshopID"`
+	// +optional
+	WorkshopID *string `json:"workshopID,omitempty"`
 }
 
 // Backup handles automatic world saving and backup creation,
@@ -120,42 +141,50 @@ type Backup struct {
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:validation:Maximum=2147483647
 	// +kubebuilder:default=0
-	SaveWorldEveryMinutes int32 `json:"SaveWorldEveryMinutes"`
+	// +optional
+	SaveWorldEveryMinutes *int32 `json:"SaveWorldEveryMinutes,omitempty"`
 
 	// BackupsCount is the number of backups to keep
 	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:validation:Maximum=300
 	// +kubebuilder:default=5
-	BackupsCount int32 `json:"BackupsCount"`
+	// +optional
+	BackupsCount *int32 `json:"BackupsCount,omitempty"`
 
 	// BackupsOnStart enables backups when server starts
 	// +kubebuilder:default=true
-	BackupsOnStart bool `json:"BackupsOnStart"`
+	// +optional
+	BackupsOnStart *bool `json:"BackupsOnStart,omitempty"`
 
 	// BackupsOnVersionChange enables backups on version changes
 	// +kubebuilder:default=true
-	BackupsOnVersionChange bool `json:"BackupsOnVersionChange"`
+	// +optional
+	BackupsOnVersionChange *bool `json:"BackupsOnVersionChange,omitempty"`
 
 	// BackupsPeriod is the backup interval in minutes
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:validation:Maximum=1500
 	// +kubebuilder:default=0
-	BackupsPeriod int32 `json:"BackupsPeriod"`
+	// +optional
+	BackupsPeriod *int32 `json:"BackupsPeriod,omitempty"`
 }
 
 // Logging configures what client actions and commands are logged to files
 type Logging struct {
 	// PerkLogs enables tracking player perk changes in PerkLog.txt
 	// +kubebuilder:default=true
-	PerkLogs bool `json:"PerkLogs"`
+	// +optional
+	PerkLogs *bool `json:"PerkLogs,omitempty"`
 
 	// ClientCommandFilter lists commands not written to cmd.txt log
 	// +kubebuilder:default="-vehicle.*;+vehicle.damageWindow;+vehicle.fixPart;+vehicle.installPart;+vehicle.uninstallPart"
-	ClientCommandFilter string `json:"ClientCommandFilter"`
+	// +optional
+	ClientCommandFilter *string `json:"ClientCommandFilter,omitempty"`
 
 	// ClientActionLogs lists actions written to ClientActionLogs.txt
 	// +kubebuilder:default="ISEnterVehicle;ISExitVehicle;ISTakeEngineParts;"
-	ClientActionLogs string `json:"ClientActionLogs"`
+	// +optional
+	ClientActionLogs *string `json:"ClientActionLogs,omitempty"`
 }
 
 // Moderation customizes staff member capabilities and restrictions,
@@ -163,31 +192,38 @@ type Logging struct {
 type Moderation struct {
 	// DisableRadioStaff disables radio for staff
 	// +kubebuilder:default=false
-	DisableRadioStaff bool `json:"DisableRadioStaff"`
+	// +optional
+	DisableRadioStaff *bool `json:"DisableRadioStaff,omitempty"`
 
 	// DisableRadioAdmin disables radio for admins
 	// +kubebuilder:default=true
-	DisableRadioAdmin bool `json:"DisableRadioAdmin"`
+	// +optional
+	DisableRadioAdmin *bool `json:"DisableRadioAdmin,omitempty"`
 
 	// DisableRadioGM disables radio for GMs
 	// +kubebuilder:default=true
-	DisableRadioGM bool `json:"DisableRadioGM"`
+	// +optional
+	DisableRadioGM *bool `json:"DisableRadioGM,omitempty"`
 
 	// DisableRadioOverseer disables radio for overseers
 	// +kubebuilder:default=false
-	DisableRadioOverseer bool `json:"DisableRadioOverseer"`
+	// +optional
+	DisableRadioOverseer *bool `json:"DisableRadioOverseer,omitempty"`
 
 	// DisableRadioModerator disables radio for moderators
 	// +kubebuilder:default=false
-	DisableRadioModerator bool `json:"DisableRadioModerator"`
+	// +optional
+	DisableRadioModerator *bool `json:"DisableRadioModerator,omitempty"`
 
 	// DisableRadioInvisible disables radio for invisible players
 	// +kubebuilder:default=true
-	DisableRadioInvisible bool `json:"DisableRadioInvisible"`
+	// +optional
+	DisableRadioInvisible *bool `json:"DisableRadioInvisible,omitempty"`
 
 	// BanKickGlobalSound enables global sound on ban/kick
 	// +kubebuilder:default=true
-	BanKickGlobalSound bool `json:"BanKickGlobalSound"`
+	// +optional
+	BanKickGlobalSound *bool `json:"BanKickGlobalSound,omitempty"`
 }
 
 // Steam manages Steam platform integration and anti-cheat measures,
@@ -195,7 +231,8 @@ type Moderation struct {
 type Steam struct {
 	// SteamScoreboard controls visibility of Steam names/avatars. Can be "true" (visible to everyone), "false" (visible to no one), or "admin" (visible to only admins)
 	// +kubebuilder:default="true"
-	SteamScoreboard string `json:"SteamScoreboard"`
+	// +optional
+	SteamScoreboard *string `json:"SteamScoreboard,omitempty"`
 }
 
 // Discord enables and configures integration with Discord,
@@ -203,16 +240,20 @@ type Steam struct {
 type Discord struct {
 	// DiscordEnable enables Discord chat integration
 	// +kubebuilder:default=false
-	DiscordEnable bool `json:"DiscordEnable"`
+	// +optional
+	DiscordEnable *bool `json:"DiscordEnable,omitempty"`
 
 	// DiscordToken is the Discord bot token
-	DiscordToken string `json:"DiscordToken"`
+	// +optional
+	DiscordToken *string `json:"DiscordToken,omitempty"`
 
 	// DiscordChannel is the Discord channel name. Try channel ID if having difficulties.
-	DiscordChannel string `json:"DiscordChannel"`
+	// +optional
+	DiscordChannel *string `json:"DiscordChannel,omitempty"`
 
 	// DiscordChannelID is the Discord channel ID. Use if having difficulties with channel name.
-	DiscordChannelID string `json:"DiscordChannelID"`
+	// +optional
+	DiscordChannelID *string `json:"DiscordChannelID,omitempty"`
 }
 
 // Communication manages all player interaction features including global chat,
@@ -220,34 +261,41 @@ type Discord struct {
 type Communication struct {
 	// GlobalChat enables global chat
 	// +kubebuilder:default=true
-	GlobalChat bool `json:"GlobalChat"`
+	// +optional
+	GlobalChat *bool `json:"GlobalChat,omitempty"`
 
 	// ChatStreams lists available chat streams
 	// +kubebuilder:default="s,r,a,w,y,sh,f,all"
-	ChatStreams string `json:"ChatStreams"`
+	// +optional
+	ChatStreams *string `json:"ChatStreams,omitempty"`
 
 	// ServerWelcomeMessage is shown to players on login. Use <LINE> for newlines and <RGB:r,g,b> for colors.
-	ServerWelcomeMessage string `json:"ServerWelcomeMessage"`
+	// +optional
+	ServerWelcomeMessage *string `json:"ServerWelcomeMessage,omitempty"`
 
 	// VoiceEnable enables VOIP
 	// +kubebuilder:default=true
-	VoiceEnable bool `json:"VoiceEnable"`
+	// +optional
+	VoiceEnable *bool `json:"VoiceEnable,omitempty"`
 
 	// VoiceMinDistance is minimum VOIP audible distance
 	// +kubebuilder:validation:Minimum=0.00
 	// +kubebuilder:validation:Maximum=100000.00
 	// +kubebuilder:default=10.00
-	VoiceMinDistance float32 `json:"VoiceMinDistance"`
+	// +optional
+	VoiceMinDistance *float32 `json:"VoiceMinDistance,omitempty"`
 
 	// VoiceMaxDistance is maximum VOIP audible distance
 	// +kubebuilder:validation:Minimum=0.00
 	// +kubebuilder:validation:Maximum=100000.00
 	// +kubebuilder:default=100.00
-	VoiceMaxDistance float32 `json:"VoiceMaxDistance"`
+	// +optional
+	VoiceMaxDistance *float32 `json:"VoiceMaxDistance,omitempty"`
 
 	// Voice3D enables directional VOIP audio
 	// +kubebuilder:default=true
-	Voice3D bool `json:"Voice3D"`
+	// +optional
+	Voice3D *bool `json:"Voice3D,omitempty"`
 }
 
 // Gameplay controls fundamental aspects of the player experience including
@@ -255,84 +303,103 @@ type Communication struct {
 type Gameplay struct {
 	// PVP enables player vs player combat
 	// +kubebuilder:default=true
-	PVP bool `json:"PVP"`
+	// +optional
+	PVP *bool `json:"PVP,omitempty"`
 
 	// PauseEmpty pauses time when no players online
 	// +kubebuilder:default=true
-	PauseEmpty bool `json:"PauseEmpty"`
+	// +optional
+	PauseEmpty *bool `json:"PauseEmpty,omitempty"`
 
 	// DisplayUserName shows player names
 	// +kubebuilder:default=true
-	DisplayUserName bool `json:"DisplayUserName"`
+	// +optional
+	DisplayUserName *bool `json:"DisplayUserName,omitempty"`
 
 	// ShowFirstAndLastName shows full player names
 	// +kubebuilder:default=false
-	ShowFirstAndLastName bool `json:"ShowFirstAndLastName"`
+	// +optional
+	ShowFirstAndLastName *bool `json:"ShowFirstAndLastName,omitempty"`
 
 	// SpawnPoint forces spawn location (x,y,z). Find coordinates at map.projectzomboid.com. Ignored when 0,0,0.
 	// +kubebuilder:default="0,0,0"
-	SpawnPoint string `json:"SpawnPoint"`
+	// +optional
+	SpawnPoint *string `json:"SpawnPoint,omitempty"`
 
 	// SpawnItems lists items given to new players. Example: Base.Axe,Base.Bag_BigHikingBag
-	SpawnItems string `json:"SpawnItems"`
+	// +optional
+	SpawnItems *string `json:"SpawnItems,omitempty"`
 
 	// NoFire disables all forms of fire except campfires
 	// +kubebuilder:default=false
-	NoFire bool `json:"NoFire"`
+	// +optional
+	NoFire *bool `json:"NoFire,omitempty"`
 
 	// AnnounceDeath broadcasts player deaths
 	// +kubebuilder:default=false
-	AnnounceDeath bool `json:"AnnounceDeath"`
+	// +optional
+	AnnounceDeath *bool `json:"AnnounceDeath,omitempty"`
 
 	// MinutesPerPage is reading time per book page
 	// +kubebuilder:validation:Minimum=0.00
 	// +kubebuilder:validation:Maximum=60.00
 	// +kubebuilder:default=1.00
-	MinutesPerPage float32 `json:"MinutesPerPage"`
+	// +optional
+	MinutesPerPage *float32 `json:"MinutesPerPage,omitempty"`
 
 	// AllowDestructionBySledgehammer enables sledgehammer destruction
 	// +kubebuilder:default=true
-	AllowDestructionBySledgehammer bool `json:"AllowDestructionBySledgehammer"`
+	// +optional
+	AllowDestructionBySledgehammer *bool `json:"AllowDestructionBySledgehammer,omitempty"`
 
 	// SledgehammerOnlyInSafehouse restricts sledgehammer use to safehouses
 	// +kubebuilder:default=false
-	SledgehammerOnlyInSafehouse bool `json:"SledgehammerOnlyInSafehouse"`
+	// +optional
+	SledgehammerOnlyInSafehouse *bool `json:"SledgehammerOnlyInSafehouse,omitempty"`
 
 	// SleepAllowed enables sleeping
 	// +kubebuilder:default=false
-	SleepAllowed bool `json:"SleepAllowed"`
+	// +optional
+	SleepAllowed *bool `json:"SleepAllowed,omitempty"`
 
 	// SleepNeeded requires sleeping. Ignored if SleepAllowed=false
 	// +kubebuilder:default=false
-	SleepNeeded bool `json:"SleepNeeded"`
+	// +optional
+	SleepNeeded *bool `json:"SleepNeeded,omitempty"`
 
 	// KnockedDownAllowed enables knock downs
 	// +kubebuilder:default=true
-	KnockedDownAllowed bool `json:"KnockedDownAllowed"`
+	// +optional
+	KnockedDownAllowed *bool `json:"KnockedDownAllowed,omitempty"`
 
 	// SneakModeHideFromOtherPlayers enables sneaking from players
 	// +kubebuilder:default=true
-	SneakModeHideFromOtherPlayers bool `json:"SneakModeHideFromOtherPlayers"`
+	// +optional
+	SneakModeHideFromOtherPlayers *bool `json:"SneakModeHideFromOtherPlayers,omitempty"`
 
 	// SpeedLimit caps movement speed
 	// +kubebuilder:validation:Minimum=10.00
 	// +kubebuilder:validation:Maximum=150.00
 	// +kubebuilder:default=70.00
-	SpeedLimit float32 `json:"SpeedLimit"`
+	// +optional
+	SpeedLimit *float32 `json:"SpeedLimit,omitempty"`
 
 	// PlayerRespawnWithSelf enables respawning at death location
 	// +kubebuilder:default=false
-	PlayerRespawnWithSelf bool `json:"PlayerRespawnWithSelf"`
+	// +optional
+	PlayerRespawnWithSelf *bool `json:"PlayerRespawnWithSelf,omitempty"`
 
 	// PlayerRespawnWithOther enables respawning at other players
 	// +kubebuilder:default=false
-	PlayerRespawnWithOther bool `json:"PlayerRespawnWithOther"`
+	// +optional
+	PlayerRespawnWithOther *bool `json:"PlayerRespawnWithOther,omitempty"`
 
 	// FastForwardMultiplier affects sleep time passage
 	// +kubebuilder:validation:Minimum=1.00
 	// +kubebuilder:validation:Maximum=100.00
 	// +kubebuilder:default=40.00
-	FastForwardMultiplier float32 `json:"FastForwardMultiplier"`
+	// +optional
+	FastForwardMultiplier *float32 `json:"FastForwardMultiplier,omitempty"`
 }
 
 // PVP fine-tunes player versus player combat with safety systems,
@@ -340,39 +407,46 @@ type Gameplay struct {
 type PVP struct {
 	// SafetySystem enables PVP safety system. When false, players can hurt each other anytime if PVP enabled.
 	// +kubebuilder:default=true
-	SafetySystem bool `json:"SafetySystem"`
+	// +optional
+	SafetySystem *bool `json:"SafetySystem,omitempty"`
 
 	// ShowSafety shows safety status with skull icon
 	// +kubebuilder:default=true
-	ShowSafety bool `json:"ShowSafety"`
+	// +optional
+	ShowSafety *bool `json:"ShowSafety,omitempty"`
 
 	// SafetyToggleTimer is delay for toggling safety
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:validation:Maximum=1000
 	// +kubebuilder:default=2
-	SafetyToggleTimer int32 `json:"SafetyToggleTimer"`
+	// +optional
+	SafetyToggleTimer *int32 `json:"SafetyToggleTimer,omitempty"`
 
 	// SafetyCooldownTimer is cooldown between safety toggles
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:validation:Maximum=1000
 	// +kubebuilder:default=3
-	SafetyCooldownTimer int32 `json:"SafetyCooldownTimer"`
+	// +optional
+	SafetyCooldownTimer *int32 `json:"SafetyCooldownTimer,omitempty"`
 
 	// PVPMeleeDamageModifier affects melee damage
 	// +kubebuilder:validation:Minimum=0.00
 	// +kubebuilder:validation:Maximum=500.00
 	// +kubebuilder:default=30.00
-	PVPMeleeDamageModifier float32 `json:"PVPMeleeDamageModifier"`
+	// +optional
+	PVPMeleeDamageModifier *float32 `json:"PVPMeleeDamageModifier,omitempty"`
 
 	// PVPFirearmDamageModifier affects firearm damage
 	// +kubebuilder:validation:Minimum=0.00
 	// +kubebuilder:validation:Maximum=500.00
 	// +kubebuilder:default=50.00
-	PVPFirearmDamageModifier float32 `json:"PVPFirearmDamageModifier"`
+	// +optional
+	PVPFirearmDamageModifier *float32 `json:"PVPFirearmDamageModifier,omitempty"`
 
 	// PVPMeleeWhileHitReaction enables hit reactions
 	// +kubebuilder:default=false
-	PVPMeleeWhileHitReaction bool `json:"PVPMeleeWhileHitReaction"`
+	// +optional
+	PVPMeleeWhileHitReaction *bool `json:"PVPMeleeWhileHitReaction,omitempty"`
 }
 
 // Safehouse manages player-claimed safe areas including access permissions,
@@ -380,47 +454,57 @@ type PVP struct {
 type Safehouse struct {
 	// PlayerSafehouse enables player safehouses
 	// +kubebuilder:default=false
-	PlayerSafehouse bool `json:"PlayerSafehouse"`
+	// +optional
+	PlayerSafehouse *bool `json:"PlayerSafehouse,omitempty"`
 
 	// AdminSafehouse enables admin safehouses
 	// +kubebuilder:default=false
-	AdminSafehouse bool `json:"AdminSafehouse"`
+	// +optional
+	AdminSafehouse *bool `json:"AdminSafehouse,omitempty"`
 
 	// SafehouseAllowTrepass allows entering others' safehouses
 	// +kubebuilder:default=true
-	SafehouseAllowTrepass bool `json:"SafehouseAllowTrepass"`
+	// +optional
+	SafehouseAllowTrepass *bool `json:"SafehouseAllowTrepass,omitempty"`
 
 	// SafehouseAllowFire allows fire in safehouses
 	// +kubebuilder:default=true
-	SafehouseAllowFire bool `json:"SafehouseAllowFire"`
+	// +optional
+	SafehouseAllowFire *bool `json:"SafehouseAllowFire,omitempty"`
 
 	// SafehouseAllowLoot allows looting in safehouses
 	// +kubebuilder:default=true
-	SafehouseAllowLoot bool `json:"SafehouseAllowLoot"`
+	// +optional
+	SafehouseAllowLoot *bool `json:"SafehouseAllowLoot,omitempty"`
 
 	// SafehouseAllowRespawn allows respawning in safehouses
 	// +kubebuilder:default=false
-	SafehouseAllowRespawn bool `json:"SafehouseAllowRespawn"`
+	// +optional
+	SafehouseAllowRespawn *bool `json:"SafehouseAllowRespawn,omitempty"`
 
 	// SafehouseDaySurvivedToClaim is days before claiming
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:validation:Maximum=2147483647
 	// +kubebuilder:default=0
-	SafehouseDaySurvivedToClaim int32 `json:"SafehouseDaySurvivedToClaim"`
+	// +optional
+	SafehouseDaySurvivedToClaim *int32 `json:"SafehouseDaySurvivedToClaim,omitempty"`
 
 	// SafeHouseRemovalTime is hours before removal when not visited
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:validation:Maximum=2147483647
 	// +kubebuilder:default=144
-	SafeHouseRemovalTime int32 `json:"SafeHouseRemovalTime"`
+	// +optional
+	SafeHouseRemovalTime *int32 `json:"SafeHouseRemovalTime,omitempty"`
 
 	// SafehouseAllowNonResidential allows non-residential safehouses
 	// +kubebuilder:default=false
-	SafehouseAllowNonResidential bool `json:"SafehouseAllowNonResidential"`
+	// +optional
+	SafehouseAllowNonResidential *bool `json:"SafehouseAllowNonResidential,omitempty"`
 
 	// DisableSafehouseWhenPlayerConnected disables when owner online
 	// +kubebuilder:default=false
-	DisableSafehouseWhenPlayerConnected bool `json:"DisableSafehouseWhenPlayerConnected"`
+	// +optional
+	DisableSafehouseWhenPlayerConnected *bool `json:"DisableSafehouseWhenPlayerConnected,omitempty"`
 }
 
 // Faction configures the player group system including creation requirements
@@ -428,19 +512,22 @@ type Safehouse struct {
 type Faction struct {
 	// Faction enables faction system
 	// +kubebuilder:default=true
-	Faction bool `json:"Faction"`
+	// +optional
+	Faction *bool `json:"Faction,omitempty"`
 
 	// FactionDaySurvivedToCreate is days before creation
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:validation:Maximum=2147483647
 	// +kubebuilder:default=0
-	FactionDaySurvivedToCreate int32 `json:"FactionDaySurvivedToCreate"`
+	// +optional
+	FactionDaySurvivedToCreate *int32 `json:"FactionDaySurvivedToCreate,omitempty"`
 
 	// FactionPlayersRequiredForTag is players needed for tag
 	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:validation:Maximum=2147483647
 	// +kubebuilder:default=1
-	FactionPlayersRequiredForTag int32 `json:"FactionPlayersRequiredForTag"`
+	// +optional
+	FactionPlayersRequiredForTag *int32 `json:"FactionPlayersRequiredForTag,omitempty"`
 }
 
 // Loot manages the respawning and limitations of items in containers,
@@ -450,120 +537,159 @@ type Loot struct {
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:validation:Maximum=2147483647
 	// +kubebuilder:default=0
-	HoursForLootRespawn int32 `json:"HoursForLootRespawn"`
+	// +optional
+	HoursForLootRespawn *int32 `json:"HoursForLootRespawn,omitempty"`
 
 	// MaxItemsForLootRespawn is max items per respawn
 	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:validation:Maximum=2147483647
 	// +kubebuilder:default=4
-	MaxItemsForLootRespawn int32 `json:"MaxItemsForLootRespawn"`
+	// +optional
+	MaxItemsForLootRespawn *int32 `json:"MaxItemsForLootRespawn,omitempty"`
 
 	// ConstructionPreventsLootRespawn prevents respawn near construction
 	// +kubebuilder:default=true
-	ConstructionPreventsLootRespawn bool `json:"ConstructionPreventsLootRespawn"`
+	// +optional
+	ConstructionPreventsLootRespawn *bool `json:"ConstructionPreventsLootRespawn,omitempty"`
 
 	// ItemNumbersLimitPerContainer caps items per container. Includes small items like nails.
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:validation:Maximum=9000
 	// +kubebuilder:default=0
-	ItemNumbersLimitPerContainer int32 `json:"ItemNumbersLimitPerContainer"`
+	// +optional
+	ItemNumbersLimitPerContainer *int32 `json:"ItemNumbersLimitPerContainer,omitempty"`
 
 	// TrashDeleteAll enables complete trash deletion
 	// +kubebuilder:default=false
-	TrashDeleteAll bool `json:"TrashDeleteAll"`
+	// +optional
+	TrashDeleteAll *bool `json:"TrashDeleteAll,omitempty"`
 }
 
 // AntiCheat configures the 24 different protection types and their thresholds
 type AntiCheat struct {
 	// DoLuaChecksum enables kicking clients with mismatched game files
 	// +kubebuilder:default=true
-	DoLuaChecksum bool `json:"DoLuaChecksum"`
+	// +optional
+	DoLuaChecksum *bool `json:"DoLuaChecksum,omitempty"`
 
 	// KickFastPlayers enables kicking speed hackers. May be buggy - use with caution.
 	// +kubebuilder:default=false
-	KickFastPlayers bool `json:"KickFastPlayers"`
+	// +optional
+	KickFastPlayers *bool `json:"KickFastPlayers,omitempty"`
 
 	// AntiCheatProtectionType1-24 enable different protections
 	// +kubebuilder:default=true
-	AntiCheatProtectionType1 bool `json:"AntiCheatProtectionType1"`
+	// +optional
+	AntiCheatProtectionType1 *bool `json:"AntiCheatProtectionType1,omitempty"`
 	// +kubebuilder:default=true
-	AntiCheatProtectionType2 bool `json:"AntiCheatProtectionType2"`
+	// +optional
+	AntiCheatProtectionType2 *bool `json:"AntiCheatProtectionType2,omitempty"`
 	// +kubebuilder:default=true
-	AntiCheatProtectionType3 bool `json:"AntiCheatProtectionType3"`
+	// +optional
+	AntiCheatProtectionType3 *bool `json:"AntiCheatProtectionType3,omitempty"`
 	// +kubebuilder:default=true
-	AntiCheatProtectionType4 bool `json:"AntiCheatProtectionType4"`
+	// +optional
+	AntiCheatProtectionType4 *bool `json:"AntiCheatProtectionType4,omitempty"`
 	// +kubebuilder:default=true
-	AntiCheatProtectionType5 bool `json:"AntiCheatProtectionType5"`
+	// +optional
+	AntiCheatProtectionType5 *bool `json:"AntiCheatProtectionType5,omitempty"`
 	// +kubebuilder:default=true
-	AntiCheatProtectionType6 bool `json:"AntiCheatProtectionType6"`
+	// +optional
+	AntiCheatProtectionType6 *bool `json:"AntiCheatProtectionType6,omitempty"`
 	// +kubebuilder:default=true
-	AntiCheatProtectionType7 bool `json:"AntiCheatProtectionType7"`
+	// +optional
+	AntiCheatProtectionType7 *bool `json:"AntiCheatProtectionType7,omitempty"`
 	// +kubebuilder:default=true
-	AntiCheatProtectionType8 bool `json:"AntiCheatProtectionType8"`
+	// +optional
+	AntiCheatProtectionType8 *bool `json:"AntiCheatProtectionType8,omitempty"`
 	// +kubebuilder:default=true
-	AntiCheatProtectionType9 bool `json:"AntiCheatProtectionType9"`
+	// +optional
+	AntiCheatProtectionType9 *bool `json:"AntiCheatProtectionType9,omitempty"`
 	// +kubebuilder:default=true
-	AntiCheatProtectionType10 bool `json:"AntiCheatProtectionType10"`
+	// +optional
+	AntiCheatProtectionType10 *bool `json:"AntiCheatProtectionType10,omitempty"`
 	// +kubebuilder:default=true
-	AntiCheatProtectionType11 bool `json:"AntiCheatProtectionType11"`
+	// +optional
+	AntiCheatProtectionType11 *bool `json:"AntiCheatProtectionType11,omitempty"`
 	// +kubebuilder:default=true
-	AntiCheatProtectionType12 bool `json:"AntiCheatProtectionType12"`
+	// +optional
+	AntiCheatProtectionType12 *bool `json:"AntiCheatProtectionType12,omitempty"`
 	// +kubebuilder:default=true
-	AntiCheatProtectionType13 bool `json:"AntiCheatProtectionType13"`
+	// +optional
+	AntiCheatProtectionType13 *bool `json:"AntiCheatProtectionType13,omitempty"`
 	// +kubebuilder:default=true
-	AntiCheatProtectionType14 bool `json:"AntiCheatProtectionType14"`
+	// +optional
+	AntiCheatProtectionType14 *bool `json:"AntiCheatProtectionType14,omitempty"`
 	// +kubebuilder:default=true
-	AntiCheatProtectionType15 bool `json:"AntiCheatProtectionType15"`
+	// +optional
+	AntiCheatProtectionType15 *bool `json:"AntiCheatProtectionType15,omitempty"`
 	// +kubebuilder:default=true
-	AntiCheatProtectionType16 bool `json:"AntiCheatProtectionType16"`
+	// +optional
+	AntiCheatProtectionType16 *bool `json:"AntiCheatProtectionType16,omitempty"`
 	// +kubebuilder:default=true
-	AntiCheatProtectionType17 bool `json:"AntiCheatProtectionType17"`
+	// +optional
+	AntiCheatProtectionType17 *bool `json:"AntiCheatProtectionType17,omitempty"`
 	// +kubebuilder:default=true
-	AntiCheatProtectionType18 bool `json:"AntiCheatProtectionType18"`
+	// +optional
+	AntiCheatProtectionType18 *bool `json:"AntiCheatProtectionType18,omitempty"`
 	// +kubebuilder:default=true
-	AntiCheatProtectionType19 bool `json:"AntiCheatProtectionType19"`
+	// +optional
+	AntiCheatProtectionType19 *bool `json:"AntiCheatProtectionType19,omitempty"`
 	// +kubebuilder:default=true
-	AntiCheatProtectionType20 bool `json:"AntiCheatProtectionType20"`
+	// +optional
+	AntiCheatProtectionType20 *bool `json:"AntiCheatProtectionType20,omitempty"`
 	// +kubebuilder:default=true
-	AntiCheatProtectionType21 bool `json:"AntiCheatProtectionType21"`
+	// +optional
+	AntiCheatProtectionType21 *bool `json:"AntiCheatProtectionType21,omitempty"`
 	// +kubebuilder:default=true
-	AntiCheatProtectionType22 bool `json:"AntiCheatProtectionType22"`
+	// +optional
+	AntiCheatProtectionType22 *bool `json:"AntiCheatProtectionType22,omitempty"`
 	// +kubebuilder:default=true
-	AntiCheatProtectionType23 bool `json:"AntiCheatProtectionType23"`
+	// +optional
+	AntiCheatProtectionType23 *bool `json:"AntiCheatProtectionType23,omitempty"`
 	// +kubebuilder:default=true
-	AntiCheatProtectionType24 bool `json:"AntiCheatProtectionType24"`
+	// +optional
+	AntiCheatProtectionType24 *bool `json:"AntiCheatProtectionType24,omitempty"`
 
 	// Protection type threshold multipliers
 	// +kubebuilder:validation:Minimum=1.00
 	// +kubebuilder:validation:Maximum=10.00
 	// +kubebuilder:default=3.00
-	AntiCheatProtectionType2ThresholdMultiplier float32 `json:"AntiCheatProtectionType2ThresholdMultiplier"`
+	// +optional
+	AntiCheatProtectionType2ThresholdMultiplier *float32 `json:"AntiCheatProtectionType2ThresholdMultiplier,omitempty"`
 	// +kubebuilder:validation:Minimum=1.00
 	// +kubebuilder:validation:Maximum=10.00
 	// +kubebuilder:default=1.00
-	AntiCheatProtectionType3ThresholdMultiplier float32 `json:"AntiCheatProtectionType3ThresholdMultiplier"`
+	// +optional
+	AntiCheatProtectionType3ThresholdMultiplier *float32 `json:"AntiCheatProtectionType3ThresholdMultiplier,omitempty"`
 	// +kubebuilder:validation:Minimum=1.00
 	// +kubebuilder:validation:Maximum=10.00
 	// +kubebuilder:default=1.00
-	AntiCheatProtectionType4ThresholdMultiplier float32 `json:"AntiCheatProtectionType4ThresholdMultiplier"`
+	// +optional
+	AntiCheatProtectionType4ThresholdMultiplier *float32 `json:"AntiCheatProtectionType4ThresholdMultiplier,omitempty"`
 	// +kubebuilder:validation:Minimum=1.00
 	// +kubebuilder:validation:Maximum=10.00
 	// +kubebuilder:default=1.00
-	AntiCheatProtectionType9ThresholdMultiplier float32 `json:"AntiCheatProtectionType9ThresholdMultiplier"`
+	// +optional
+	AntiCheatProtectionType9ThresholdMultiplier *float32 `json:"AntiCheatProtectionType9ThresholdMultiplier,omitempty"`
 	// +kubebuilder:validation:Minimum=1.00
 	// +kubebuilder:validation:Maximum=10.00
 	// +kubebuilder:default=1.00
-	AntiCheatProtectionType15ThresholdMultiplier float32 `json:"AntiCheatProtectionType15ThresholdMultiplier"`
+	// +optional
+	AntiCheatProtectionType15ThresholdMultiplier *float32 `json:"AntiCheatProtectionType15ThresholdMultiplier,omitempty"`
 	// +kubebuilder:validation:Minimum=1.00
 	// +kubebuilder:validation:Maximum=10.00
 	// +kubebuilder:default=1.00
-	AntiCheatProtectionType20ThresholdMultiplier float32 `json:"AntiCheatProtectionType20ThresholdMultiplier"`
+	// +optional
+	AntiCheatProtectionType20ThresholdMultiplier *float32 `json:"AntiCheatProtectionType20ThresholdMultiplier,omitempty"`
 	// +kubebuilder:validation:Minimum=1.00
 	// +kubebuilder:validation:Maximum=10.00
 	// +kubebuilder:default=1.00
-	AntiCheatProtectionType22ThresholdMultiplier float32 `json:"AntiCheatProtectionType22ThresholdMultiplier"`
+	// +optional
+	AntiCheatProtectionType22ThresholdMultiplier *float32 `json:"AntiCheatProtectionType22ThresholdMultiplier,omitempty"`
 	// +kubebuilder:validation:Minimum=1.00
 	// +kubebuilder:validation:Maximum=10.00
 	// +kubebuilder:default=6.00
-	AntiCheatProtectionType24ThresholdMultiplier float32 `json:"AntiCheatProtectionType24ThresholdMultiplier"`
+	// +optional
+	AntiCheatProtectionType24ThresholdMultiplier *float32 `json:"AntiCheatProtectionType24ThresholdMultiplier,omitempty"`
 }
