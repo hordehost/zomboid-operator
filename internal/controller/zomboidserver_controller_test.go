@@ -11,6 +11,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -174,6 +175,56 @@ var _ = Describe("ZomboidServer Controller", func() {
 				It("should create PVC with correct access mode", func() {
 					Expect(pvc.Spec.AccessModes).To(ConsistOf(corev1.ReadWriteOnce))
 				})
+
+				It("should set the correct labels", func() {
+					expectedLabels := map[string]string{
+						"app.kubernetes.io/name":       "zomboidserver",
+						"app.kubernetes.io/instance":   zomboidServer.Name,
+						"app.kubernetes.io/managed-by": "zomboid-operator",
+					}
+					Expect(pvc.Labels).To(Equal(expectedLabels))
+				})
+			})
+
+			When("creating the RCON Service", func() {
+				var rconService *corev1.Service
+
+				BeforeEach(func() {
+					rconService = &corev1.Service{}
+					Expect(k8sClient.Get(ctx, types.NamespacedName{
+						Name:      zomboidServer.Name + "-rcon",
+						Namespace: zomboidServer.Namespace,
+					}, rconService)).To(Succeed())
+				})
+
+				It("should create the RCON service with correct port", func() {
+					Expect(rconService.Spec.Ports).To(ConsistOf(
+						corev1.ServicePort{
+							Name:       "rcon",
+							Port:       27015,
+							Protocol:   corev1.ProtocolTCP,
+							TargetPort: intstr.FromString("rcon"),
+						},
+					))
+				})
+
+				It("should set the correct selector", func() {
+					Expect(rconService.Spec.Selector).To(Equal(map[string]string{
+						"app.kubernetes.io/name":       "zomboidserver",
+						"app.kubernetes.io/instance":   zomboidServer.Name,
+						"app.kubernetes.io/managed-by": "zomboid-operator",
+					}))
+				})
+
+				It("should set the correct labels", func() {
+					expectedLabels := map[string]string{
+						"app.kubernetes.io/name":       "zomboidserver",
+						"app.kubernetes.io/instance":   zomboidServer.Name,
+						"app.kubernetes.io/managed-by": "zomboid-operator",
+					}
+					Expect(rconService.Labels).To(Equal(expectedLabels))
+					Expect(rconService.Spec.Selector).To(Equal(expectedLabels))
+				})
 			})
 
 			When("creating the Deployment", func() {
@@ -327,6 +378,25 @@ var _ = Describe("ZomboidServer Controller", func() {
 						Expect(updatedDeployment.Spec.Template.Annotations["secret/admin"]).NotTo(BeEmpty())
 						Expect(updatedDeployment.Spec.Template.Annotations["secret/server"]).To(BeEmpty())
 					})
+				})
+
+				It("should expose the RCON port", func() {
+					Expect(container.Ports).To(ContainElement(corev1.ContainerPort{
+						Name:          "rcon",
+						ContainerPort: 27015,
+						Protocol:      corev1.ProtocolTCP,
+					}))
+				})
+
+				It("should set the correct labels", func() {
+					expectedLabels := map[string]string{
+						"app.kubernetes.io/name":       "zomboidserver",
+						"app.kubernetes.io/instance":   zomboidServer.Name,
+						"app.kubernetes.io/managed-by": "zomboid-operator",
+					}
+					Expect(deployment.Labels).To(Equal(expectedLabels))
+					Expect(deployment.Spec.Selector.MatchLabels).To(Equal(expectedLabels))
+					Expect(deployment.Spec.Template.Labels).To(Equal(expectedLabels))
 				})
 			})
 		})

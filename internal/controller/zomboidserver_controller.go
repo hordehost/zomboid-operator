@@ -10,6 +10,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -29,6 +30,45 @@ import (
 type ZomboidServerReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
+}
+
+// SetupWithManager sets up the controller with the Manager.
+func (r *ZomboidServerReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	return ctrl.NewControllerManagedBy(mgr).
+		For(&zomboidv1.ZomboidServer{}).
+		Named("zomboidserver").
+		Owns(&corev1.PersistentVolumeClaim{}).
+		Owns(&appsv1.Deployment{}).
+		Owns(&corev1.Service{}).
+		Watches(
+			&corev1.Secret{},
+			handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, obj client.Object) []reconcile.Request {
+				secret := obj.(*corev1.Secret)
+
+				zomboidList := &zomboidv1.ZomboidServerList{}
+				if err := r.List(ctx, zomboidList); err != nil {
+					return nil
+				}
+
+				var requests []reconcile.Request
+				for _, zs := range zomboidList.Items {
+					request := reconcile.Request{
+						NamespacedName: types.NamespacedName{
+							Name:      zs.Name,
+							Namespace: zs.Namespace,
+						},
+					}
+
+					if zs.Namespace == secret.Namespace &&
+						(zs.Spec.Administrator.Password.LocalObjectReference.Name == secret.Name ||
+							(zs.Spec.Password != nil && zs.Spec.Password.LocalObjectReference.Name == secret.Name)) {
+						requests = append(requests, request)
+					}
+				}
+				return requests
+			}),
+		).
+		Complete(r)
 }
 
 // +kubebuilder:rbac:groups=horde.host,resources=zomboidservers,verbs=get;list;watch;create;update;patch;delete
@@ -57,13 +97,110 @@ func (r *ZomboidServerReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		}
 	}()
 
+	result, err := r.reconcileInfrastructure(ctx, zomboidServer)
+	if result != nil {
+		return *result, err
+	}
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	meta.SetStatusCondition(&zomboidServer.Status.Conditions, metav1.Condition{
+		Type:               zomboidv1.TypeInfrastructureReady,
+		ObservedGeneration: zomboidServer.Generation,
+		Status:             metav1.ConditionTrue,
+		Reason:             zomboidv1.ReasonInfrastructureReady,
+		Message:            "All required infrastructure components are ready",
+	})
+
+	deployment := &appsv1.Deployment{}
+	if err := r.Get(ctx, types.NamespacedName{Name: zomboidServer.Name, Namespace: zomboidServer.Namespace}, deployment); err != nil {
+		zomboidServer.Status.Ready = false
+	} else {
+		zomboidServer.Status.Ready = deployment.Status.ReadyReplicas >= 1
+	}
+
+	if !zomboidServer.Status.Ready {
+		meta.SetStatusCondition(&zomboidServer.Status.Conditions, metav1.Condition{
+			Type:               zomboidv1.TypeReadyForPlayers,
+			ObservedGeneration: zomboidServer.Generation,
+			Status:             metav1.ConditionFalse,
+			Reason:             zomboidv1.ReasonServerStarting,
+			Message:            "Server is starting up",
+		})
+	} else {
+		meta.SetStatusCondition(&zomboidServer.Status.Conditions, metav1.Condition{
+			Type:               zomboidv1.TypeReadyForPlayers,
+			ObservedGeneration: zomboidServer.Generation,
+			Status:             metav1.ConditionTrue,
+			Reason:             zomboidv1.ReasonServerReady,
+			Message:            "Server is ready to accept players",
+		})
+	}
+
+	return ctrl.Result{}, nil
+}
+
+func commonLabels(zomboidServer *zomboidv1.ZomboidServer) map[string]string {
+	return map[string]string{
+		"app.kubernetes.io/name":       "zomboidserver",
+		"app.kubernetes.io/instance":   zomboidServer.Name,
+		"app.kubernetes.io/managed-by": "zomboid-operator",
+	}
+}
+
+func (r *ZomboidServerReconciler) reconcileInfrastructure(ctx context.Context, zomboidServer *zomboidv1.ZomboidServer) (*ctrl.Result, error) {
+	if err := r.reconcilePVC(ctx, zomboidServer); err != nil {
+		if errors.IsConflict(err) {
+			return &ctrl.Result{Requeue: true}, nil
+		}
+		meta.SetStatusCondition(&zomboidServer.Status.Conditions, metav1.Condition{
+			Type:    zomboidv1.TypeInfrastructureReady,
+			Status:  metav1.ConditionFalse,
+			Reason:  zomboidv1.ReasonMissingPVC,
+			Message: fmt.Sprintf("Failed to reconcile PersistentVolumeClaim: %v", err),
+		})
+		return nil, err
+	}
+
+	if err := r.reconcileDeployment(ctx, zomboidServer); err != nil {
+		if errors.IsConflict(err) {
+			return &ctrl.Result{Requeue: true}, nil
+		}
+		meta.SetStatusCondition(&zomboidServer.Status.Conditions, metav1.Condition{
+			Type:    zomboidv1.TypeInfrastructureReady,
+			Status:  metav1.ConditionFalse,
+			Reason:  zomboidv1.ReasonMissingDeployment,
+			Message: fmt.Sprintf("Failed to reconcile Deployment: %v", err),
+		})
+		return nil, err
+	}
+
+	if err := r.reconcileRCONService(ctx, zomboidServer); err != nil {
+		if errors.IsConflict(err) {
+			return &ctrl.Result{Requeue: true}, nil
+		}
+		meta.SetStatusCondition(&zomboidServer.Status.Conditions, metav1.Condition{
+			Type:    zomboidv1.TypeInfrastructureReady,
+			Status:  metav1.ConditionFalse,
+			Reason:  zomboidv1.ReasonMissingRCONService,
+			Message: fmt.Sprintf("Failed to reconcile RCON Service: %v", err),
+		})
+		return nil, err
+	}
+	return nil, nil
+}
+
+func (r *ZomboidServerReconciler) reconcilePVC(ctx context.Context, zomboidServer *zomboidv1.ZomboidServer) error {
 	pvc := &corev1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      zomboidServer.Name + "-game-data",
 			Namespace: zomboidServer.Namespace,
 		},
 	}
-	_, err = controllerutil.CreateOrUpdate(ctx, r.Client, pvc, func() error {
+
+	_, err := controllerutil.CreateOrUpdate(ctx, r.Client, pvc, func() error {
+		pvc.Labels = commonLabels(zomboidServer)
 		if pvc.CreationTimestamp.IsZero() {
 			pvc.Spec = corev1.PersistentVolumeClaimSpec{
 				AccessModes: []corev1.PersistentVolumeAccessMode{
@@ -79,29 +216,24 @@ func (r *ZomboidServerReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		} else {
 			pvc.Spec.Resources.Requests[corev1.ResourceStorage] = zomboidServer.Spec.Storage.Request
 		}
-
 		return ctrl.SetControllerReference(zomboidServer, pvc, r.Scheme)
 	})
-	if err != nil {
-		if errors.IsConflict(err) {
-			return ctrl.Result{Requeue: true}, nil
-		}
-		meta.SetStatusCondition(&zomboidServer.Status.Conditions, metav1.Condition{
-			Type:    zomboidv1.TypeInfrastructureReady,
-			Status:  metav1.ConditionFalse,
-			Reason:  zomboidv1.ReasonMissingPVC,
-			Message: fmt.Sprintf("Failed to create or update PVC: %v", err),
-		})
-		return ctrl.Result{}, err
-	}
 
+	return err
+}
+
+func (r *ZomboidServerReconciler) reconcileDeployment(ctx context.Context, zomboidServer *zomboidv1.ZomboidServer) error {
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      zomboidServer.Name,
 			Namespace: zomboidServer.Namespace,
 		},
 	}
-	_, err = controllerutil.CreateOrUpdate(ctx, r.Client, deployment, func() error {
+
+	_, err := controllerutil.CreateOrUpdate(ctx, r.Client, deployment, func() error {
+		labels := commonLabels(zomboidServer)
+		deployment.Labels = labels
+
 		envVars := []corev1.EnvVar{
 			{
 				Name:  "ZOMBOID_JVM_MAX_HEAP",
@@ -168,15 +300,11 @@ func (r *ZomboidServerReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 				Type: appsv1.RecreateDeploymentStrategyType,
 			},
 			Selector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{
-					"app": zomboidServer.Name,
-				},
+				MatchLabels: labels,
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: map[string]string{
-						"app": zomboidServer.Name,
-					},
+					Labels:      labels,
 					Annotations: annotations,
 				},
 				Spec: corev1.PodSpec{
@@ -224,6 +352,13 @@ func (r *ZomboidServerReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 									},
 								},
 							},
+							Ports: []corev1.ContainerPort{
+								{
+									Name:          "rcon",
+									ContainerPort: 27015,
+									Protocol:      corev1.ProtocolTCP,
+								},
+							},
 						},
 					},
 					Volumes: []corev1.Volume{
@@ -231,7 +366,7 @@ func (r *ZomboidServerReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 							Name: "game-data",
 							VolumeSource: corev1.VolumeSource{
 								PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-									ClaimName: pvc.Name,
+									ClaimName: zomboidServer.Name + "-game-data",
 								},
 							},
 						},
@@ -242,85 +377,34 @@ func (r *ZomboidServerReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 
 		return ctrl.SetControllerReference(zomboidServer, deployment, r.Scheme)
 	})
-	if err != nil {
-		if errors.IsConflict(err) {
-			return ctrl.Result{Requeue: true}, nil
-		}
-		meta.SetStatusCondition(&zomboidServer.Status.Conditions, metav1.Condition{
-			Type:    zomboidv1.TypeInfrastructureReady,
-			Status:  metav1.ConditionFalse,
-			Reason:  zomboidv1.ReasonMissingDeployment,
-			Message: fmt.Sprintf("Failed to create or update Deployment: %v", err),
-		})
-		return ctrl.Result{}, err
-	}
 
-	meta.SetStatusCondition(&zomboidServer.Status.Conditions, metav1.Condition{
-		Type:               zomboidv1.TypeInfrastructureReady,
-		ObservedGeneration: zomboidServer.Generation,
-		Status:             metav1.ConditionTrue,
-		Reason:             zomboidv1.ReasonInfrastructureReady,
-		Message:            "All required infrastructure components are ready",
-	})
-
-	zomboidServer.Status.Ready = deployment != nil && deployment.Status.ReadyReplicas == 1
-
-	if !zomboidServer.Status.Ready {
-		meta.SetStatusCondition(&zomboidServer.Status.Conditions, metav1.Condition{
-			Type:               zomboidv1.TypeReadyForPlayers,
-			ObservedGeneration: zomboidServer.Generation,
-			Status:             metav1.ConditionFalse,
-			Reason:             zomboidv1.ReasonServerStarting,
-			Message:            "Server is starting up",
-		})
-	} else {
-		meta.SetStatusCondition(&zomboidServer.Status.Conditions, metav1.Condition{
-			Type:               zomboidv1.TypeReadyForPlayers,
-			ObservedGeneration: zomboidServer.Generation,
-			Status:             metav1.ConditionTrue,
-			Reason:             zomboidv1.ReasonServerReady,
-			Message:            "Server is ready to accept players",
-		})
-	}
-
-	return ctrl.Result{}, nil
+	return err
 }
 
-// SetupWithManager sets up the controller with the Manager.
-func (r *ZomboidServerReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewControllerManagedBy(mgr).
-		For(&zomboidv1.ZomboidServer{}).
-		Named("zomboidserver").
-		Owns(&corev1.PersistentVolumeClaim{}).
-		Owns(&appsv1.Deployment{}).
-		// Watch Secrets that are referenced by ZomboidServer resources
-		Watches(
-			&corev1.Secret{},
-			handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, obj client.Object) []reconcile.Request {
-				secret := obj.(*corev1.Secret)
+func (r *ZomboidServerReconciler) reconcileRCONService(ctx context.Context, zomboidServer *zomboidv1.ZomboidServer) error {
+	rconService := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      zomboidServer.Name + "-rcon",
+			Namespace: zomboidServer.Namespace,
+		},
+	}
 
-				zomboidList := &zomboidv1.ZomboidServerList{}
-				if err := r.List(ctx, zomboidList); err != nil {
-					return nil
-				}
+	_, err := controllerutil.CreateOrUpdate(ctx, r.Client, rconService, func() error {
+		labels := commonLabels(zomboidServer)
+		rconService.Labels = labels
+		rconService.Spec = corev1.ServiceSpec{
+			Selector: labels,
+			Ports: []corev1.ServicePort{
+				{
+					Name:       "rcon",
+					Port:       27015,
+					Protocol:   corev1.ProtocolTCP,
+					TargetPort: intstr.FromString("rcon"),
+				},
+			},
+		}
+		return ctrl.SetControllerReference(zomboidServer, rconService, r.Scheme)
+	})
 
-				var requests []reconcile.Request
-				for _, zs := range zomboidList.Items {
-					request := reconcile.Request{
-						NamespacedName: types.NamespacedName{
-							Name:      zs.Name,
-							Namespace: zs.Namespace,
-						},
-					}
-
-					if zs.Namespace == secret.Namespace &&
-						(zs.Spec.Administrator.Password.LocalObjectReference.Name == secret.Name ||
-							(zs.Spec.Password != nil && zs.Spec.Password.LocalObjectReference.Name == secret.Name)) {
-						requests = append(requests, request)
-					}
-				}
-				return requests
-			}),
-		).
-		Complete(r)
+	return err
 }

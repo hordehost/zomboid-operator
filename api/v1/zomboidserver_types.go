@@ -145,6 +145,7 @@ const (
 	ReasonInfrastructureReady = "InfrastructureReady"
 	ReasonMissingPVC          = "MissingPVC"
 	ReasonMissingDeployment   = "MissingDeployment"
+	ReasonMissingRCONService  = "MissingRCONService"
 )
 
 // +kubebuilder:object:root=true

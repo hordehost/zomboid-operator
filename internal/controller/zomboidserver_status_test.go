@@ -109,7 +109,7 @@ var _ = Describe("ZomboidServer Status Tests", func() {
 			Expect(infraCondition).NotTo(BeNil())
 			Expect(infraCondition.Status).To(Equal(metav1.ConditionFalse))
 			Expect(infraCondition.Reason).To(Equal(zomboidv1.ReasonMissingPVC))
-			Expect(infraCondition.Message).To(ContainSubstring("Failed to create or update PVC"))
+			Expect(infraCondition.Message).To(ContainSubstring("Failed to reconcile PersistentVolumeClaim"))
 		})
 
 		It("Should update infrastructure readiness condition", func() {
@@ -131,8 +131,9 @@ var _ = Describe("ZomboidServer Status Tests", func() {
 			Expect(infraCondition).NotTo(BeNil())
 			Expect(infraCondition.Status).To(Equal(metav1.ConditionFalse))
 			Expect(infraCondition.Reason).To(Equal(zomboidv1.ReasonMissingDeployment))
-			Expect(infraCondition.Message).To(ContainSubstring("Failed to create or update Deployment"))
+			Expect(infraCondition.Message).To(ContainSubstring("Failed to reconcile Deployment"))
 		})
+
 		It("Should update ready for players condition when deployment is not ready", func() {
 			deployment := &appsv1.Deployment{}
 			Expect(k8sClient.Get(ctx, types.NamespacedName{Name: zomboidServer.Name, Namespace: zomboidServerName.Namespace}, deployment)).Should(Succeed())
