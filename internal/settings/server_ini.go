@@ -227,30 +227,7 @@ func writeString(sb *strings.Builder, key string, value interface{}) {
 		return
 	}
 
-	switch v := value.(type) {
-	case *bool:
-		if v != nil {
-			sb.WriteString(fmt.Sprintf("%s=%v\n", key, *v))
-		}
-	case *float32:
-		if v != nil {
-			sb.WriteString(fmt.Sprintf("%s=%.1f\n", key, *v))
-		}
-	case *string:
-		if v != nil && *v != "" {
-			sb.WriteString(fmt.Sprintf("%s=%s\n", key, strings.ReplaceAll(*v, "\n", "\\n")))
-		}
-	case *int32:
-		if v != nil {
-			sb.WriteString(fmt.Sprintf("%s=%d\n", key, *v))
-		}
-	case string:
-		if v != "" {
-			sb.WriteString(fmt.Sprintf("%s=%s\n", key, v))
-		}
-	default:
-		if v != nil {
-			sb.WriteString(fmt.Sprintf("%s=%v\n", key, v))
-		}
+	if str := ValueToString(value); str != "" {
+		sb.WriteString(fmt.Sprintf("%s=%s\n", key, str))
 	}
 }

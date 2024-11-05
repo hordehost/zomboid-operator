@@ -141,6 +141,25 @@ func (r *ZomboidServerReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return r.status(ctx, zomboidServer, &ctrl.Result{RequeueAfter: 1 * time.Second}, nil)
 	}
 
+	// First observe current settings
+	result, err = r.observeCurrentSettings(ctx, zomboidServer)
+	if result != nil {
+		return r.status(ctx, zomboidServer, result, err)
+	}
+	if err != nil {
+		return r.status(ctx, zomboidServer, &ctrl.Result{}, err)
+	}
+
+	// Then reconcile to desired settings
+	result, err = r.reconcileDesiredSettings(ctx, zomboidServer)
+	if result != nil {
+		return r.status(ctx, zomboidServer, result, err)
+	}
+	if err != nil {
+		return r.status(ctx, zomboidServer, &ctrl.Result{}, err)
+	}
+
+	// Now observe current settings again to make sure they're up to date
 	result, err = r.observeCurrentSettings(ctx, zomboidServer)
 	if result != nil {
 		return r.status(ctx, zomboidServer, result, err)
@@ -488,6 +507,26 @@ func (r *ZomboidServerReconciler) reconcileGameService(ctx context.Context, zomb
 	return err
 }
 
+func (r *ZomboidServerReconciler) getRCONPassword(ctx context.Context, zomboidServer *zomboidv1.ZomboidServer) (string, error) {
+	secret := &corev1.Secret{}
+	if err := r.Get(ctx, types.NamespacedName{
+		Name:      zomboidServer.Spec.Administrator.Password.LocalObjectReference.Name,
+		Namespace: zomboidServer.Namespace,
+	}, secret); err != nil {
+		return "", fmt.Errorf("failed to get RCON secret: %w", err)
+	}
+
+	password := string(secret.Data[zomboidServer.Spec.Administrator.Password.Key])
+	if password == "" {
+		return "", fmt.Errorf(
+			"RCON password not found in secret %s",
+			zomboidServer.Spec.Administrator.Password.LocalObjectReference.Name,
+		)
+	}
+
+	return password, nil
+}
+
 func (r *ZomboidServerReconciler) observeCurrentSettings(ctx context.Context, zomboidServer *zomboidv1.ZomboidServer) (*ctrl.Result, error) {
 	if zomboidServer == nil {
 		return nil, nil
@@ -498,20 +537,9 @@ func (r *ZomboidServerReconciler) observeCurrentSettings(ctx context.Context, zo
 		return nil, nil
 	}
 
-	secret := &corev1.Secret{}
-	if err := r.Get(ctx, types.NamespacedName{
-		Name:      zomboidServer.Spec.Administrator.Password.LocalObjectReference.Name,
-		Namespace: zomboidServer.Namespace,
-	}, secret); err != nil {
-		return nil, fmt.Errorf("failed to get RCON secret: %w", err)
-	}
-
-	password := string(secret.Data[zomboidServer.Spec.Administrator.Password.Key])
-	if password == "" {
-		return nil, fmt.Errorf(
-			"RCON password not found in secret %s",
-			zomboidServer.Spec.Administrator.Password.LocalObjectReference.Name,
-		)
+	password, err := r.getRCONPassword(ctx, zomboidServer)
+	if err != nil {
+		return nil, err
 	}
 
 	hostname := fmt.Sprintf("%s-rcon.%s.svc.cluster.local", zomboidServer.Name, zomboidServer.Namespace)
@@ -539,6 +567,46 @@ func (r *ZomboidServerReconciler) observeCurrentSettings(ctx context.Context, zo
 
 	zomboidServer.Status.SettingsLastObserved = &metav1.Time{Time: time.Now()}
 	zomboidServer.Status.Settings = settings
+
+	return nil, nil
+}
+
+func (r *ZomboidServerReconciler) reconcileDesiredSettings(ctx context.Context, zomboidServer *zomboidv1.ZomboidServer) (*ctrl.Result, error) {
+	if zomboidServer == nil {
+		return nil, nil
+	}
+
+	password, err := r.getRCONPassword(ctx, zomboidServer)
+	if err != nil {
+		return nil, err
+	}
+
+	// Calculate differences between current and desired settings
+	updates := settings.SettingsDiff(zomboidServer.Status.Settings, zomboidServer.Spec.Settings)
+	if len(updates) == 0 {
+		return nil, nil
+	}
+
+	// Setup RCON connection details
+	hostname := fmt.Sprintf("%s-rcon.%s.svc.cluster.local", zomboidServer.Name, zomboidServer.Namespace)
+	port := 27015
+
+	// TODO: how to distinguish between local development and in-cluster?
+	if true {
+		parts := strings.Split(hostname, ".")
+		localPort, cleanup, err := SetupPortForwarder(ctx, r.Config, r.Client, parts[1], parts[0], port)
+		if err != nil {
+			return nil, fmt.Errorf("failed to setup port forwarder: %w", err)
+		}
+		defer cleanup()
+
+		hostname = "localhost"
+		port = localPort
+	}
+
+	if err := settings.ApplySettingsUpdates(ctx, hostname, port, password, updates); err != nil {
+		return nil, err
+	}
 
 	return nil, nil
 }

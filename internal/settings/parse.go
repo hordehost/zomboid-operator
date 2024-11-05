@@ -1,6 +1,7 @@
 package settings
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -304,4 +305,38 @@ func parseInt32(value string) *int32 {
 func parseFloat32(value string) *float32 {
 	f, _ := strconv.ParseFloat(value, 32)
 	return ptr.To(float32(f))
+}
+
+func ValueToString(value interface{}) string {
+	if value == nil {
+		return ""
+	}
+
+	switch v := value.(type) {
+	case *bool:
+		if v != nil {
+			return fmt.Sprintf("%v", *v)
+		}
+	case *float32:
+		if v != nil {
+			return fmt.Sprintf("%.1f", *v)
+		}
+	case *string:
+		if v != nil && *v != "" {
+			return strings.ReplaceAll(*v, "\n", "\\n")
+		}
+	case *int32:
+		if v != nil {
+			return fmt.Sprintf("%d", *v)
+		}
+	case string:
+		if v != "" {
+			return v
+		}
+	default:
+		if v != nil {
+			return fmt.Sprintf("%v", v)
+		}
+	}
+	return ""
 }
