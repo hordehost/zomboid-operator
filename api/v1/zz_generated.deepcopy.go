@@ -1022,7 +1022,11 @@ func (in *ZomboidServerStatus) DeepCopyInto(out *ZomboidServerStatus) {
 		in, out := &in.SettingsLastObserved, &out.SettingsLastObserved
 		*out = (*in).DeepCopy()
 	}
-	in.Settings.DeepCopyInto(&out.Settings)
+	if in.Settings != nil {
+		in, out := &in.Settings, &out.Settings
+		*out = new(ZomboidSettings)
+		(*in).DeepCopyInto(*out)
+	}
 	if in.Conditions != nil {
 		in, out := &in.Conditions, &out.Conditions
 		*out = make([]metav1.Condition, len(*in))

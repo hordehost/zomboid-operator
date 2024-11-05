@@ -141,7 +141,6 @@ func (r *ZomboidServerReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return r.status(ctx, zomboidServer, &ctrl.Result{RequeueAfter: 1 * time.Second}, nil)
 	}
 
-	// First observe current settings
 	result, err = r.observeCurrentSettings(ctx, zomboidServer)
 	if result != nil {
 		return r.status(ctx, zomboidServer, result, err)
@@ -150,8 +149,7 @@ func (r *ZomboidServerReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return r.status(ctx, zomboidServer, &ctrl.Result{}, err)
 	}
 
-	// Then reconcile to desired settings
-	result, err = r.reconcileDesiredSettings(ctx, zomboidServer)
+	result, err = r.applyDesiredSettings(ctx, zomboidServer)
 	if result != nil {
 		return r.status(ctx, zomboidServer, result, err)
 	}
@@ -549,21 +547,38 @@ func (r *ZomboidServerReconciler) observeCurrentSettings(ctx context.Context, zo
 		port = localPort
 	}
 
-	if err := settings.ReadServerOptions(hostname, port, password, &zomboidServer.Status.Settings); err != nil {
+	observed := zomboidv1.ZomboidSettings{}
+
+	if err := settings.ReadServerOptions(hostname, port, password, &observed); err != nil {
 		return nil, err
 	}
 
+	zomboidServer.Status.Settings = &observed
 	zomboidServer.Status.SettingsLastObserved = &metav1.Time{Time: time.Now()}
+
 	return nil, nil
 }
 
-func (r *ZomboidServerReconciler) reconcileDesiredSettings(ctx context.Context, zomboidServer *zomboidv1.ZomboidServer) (*ctrl.Result, error) {
+func (r *ZomboidServerReconciler) applyDesiredSettings(ctx context.Context, zomboidServer *zomboidv1.ZomboidServer) (*ctrl.Result, error) {
 	if zomboidServer == nil {
 		return nil, nil
 	}
 
+	specSettings := zomboidServer.Spec.Settings
+	statusSettings := zomboidServer.Status.Settings
+
+	if statusSettings == nil {
+		return nil, nil
+	}
+
+	// Special case: if the user isn't specifying a ResetID, backfill it with the observed value
+	// Because it was a server-generated unique ID, we can't assume there's a default
+	if specSettings.Identity.ResetID == nil {
+		zomboidServer.Spec.Settings.Identity.ResetID = statusSettings.Identity.ResetID
+	}
+
 	// Calculate differences between current and desired settings
-	updates := settings.SettingsDiff(zomboidServer.Status.Settings, zomboidServer.Spec.Settings)
+	updates := settings.SettingsDiff(*statusSettings, specSettings)
 	if len(updates) == 0 {
 		return nil, nil
 	}
@@ -590,11 +605,12 @@ func (r *ZomboidServerReconciler) reconcileDesiredSettings(ctx context.Context, 
 		port = localPort
 	}
 
-	if err := settings.ApplySettingsUpdates(ctx, hostname, port, password, updates, &zomboidServer.Status.Settings); err != nil {
+	if err := settings.ApplySettingsUpdates(ctx, hostname, port, password, updates, statusSettings); err != nil {
 		return nil, err
 	}
 
-	// The settings have already been updated, so we can update the observation time
+	// If we got here, we have applied one or more settings and gotten confirmed
+	// updated values for those settings, so bump the observed time
 	zomboidServer.Status.SettingsLastObserved = &metav1.Time{Time: time.Now()}
 
 	return nil, nil

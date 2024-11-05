@@ -16,7 +16,7 @@ var _ = Describe("Settings Diff", func() {
 
 	BeforeEach(func() {
 		// Reset settings before each test
-		current = zomboidv1.ZomboidSettings{}
+		current = *zomboidv1.DefaultZomboidSettings.DeepCopy()
 		desired = zomboidv1.ZomboidSettings{}
 	})
 
@@ -37,12 +37,14 @@ var _ = Describe("Settings Diff", func() {
 			Expect(diff).To(ContainElement([2]string{"PublicName", "Server 2"}))
 		})
 
-		It("should ignore when both values are nil", func() {
+		It("should use default value when both values are nil", func() {
 			current.Identity.Public = nil
 			desired.Identity.Public = nil
 
+			Expect(*zomboidv1.DefaultIdentity.Public).To(BeFalse())
+
 			diff := SettingsDiff(current, desired)
-			Expect(diff).NotTo(ContainElement(HaveField("0", "Public")))
+			Expect(diff).To(ContainElement([2]string{"Public", "false"}))
 		})
 	})
 
@@ -128,10 +130,12 @@ var _ = Describe("Settings Diff", func() {
 	Context("when comparing entire unset structs", func() {
 		It("should handle nil struct fields", func() {
 			// Only set Communication settings in desired
-			desired.Communication.VoiceEnable = ptr.To(true)
+			desired.Communication.VoiceEnable = ptr.To(false)
+			Expect(desired.Communication.VoiceEnable).NotTo(Equal(current.Communication.VoiceEnable))
+			Expect(desired.Communication.VoiceEnable).NotTo(Equal(zomboidv1.DefaultCommunication.VoiceEnable))
 
 			diff := SettingsDiff(current, desired)
-			Expect(diff).To(ContainElement([2]string{"VoiceEnable", "true"}))
+			Expect(diff).To(ContainElement([2]string{"VoiceEnable", "false"}))
 			Expect(diff).To(HaveLen(1))
 		})
 
@@ -377,165 +381,113 @@ var _ = Describe("Settings Diff", func() {
 	})
 
 	Context("when handling nil values", func() {
-		It("should not produce diffs when both values are nil", func() {
-			// Set some values to compare against
-			current.Identity.Public = nil
-			current.Player.MaxPlayers = nil
-			current.Communication.VoiceMinDistance = nil
+		It("should use default values when desired setting is nil", func() {
+			// Set current values that differ from defaults
+			current.Identity.Public = ptr.To(false)
+			current.Player.MaxPlayers = ptr.To(int32(50))
+			current.Communication.VoiceMinDistance = ptr.To(float32(20.0))
+
+			// Leave desired values nil to request defaults
+			desired.Identity.Public = nil                // Default is false
+			desired.Player.MaxPlayers = nil              // Default is 32
+			desired.Communication.VoiceMinDistance = nil // Default is 10.0
+
+			diff := SettingsDiff(current, desired)
+			Expect(diff).To(ContainElements(
+				[2]string{"MaxPlayers", "32"},
+				[2]string{"VoiceMinDistance", "10.0"},
+			))
+			// Public shouldn't be in diff since current matches default
+			Expect(diff).NotTo(ContainElement(ContainElement("Public")))
+		})
+
+		It("should handle nil values in complex settings", func() {
+			// Set current values
+			current.PVP.PVPMeleeDamageModifier = ptr.To(float32(40.0))
+			current.PVP.PVPFirearmDamageModifier = ptr.To(float32(60.0))
+			current.AntiCheat.AntiCheatProtectionType2ThresholdMultiplier = ptr.To(float32(5.0))
+
+			// Leave desired values nil to request defaults
+			desired.PVP.PVPMeleeDamageModifier = nil                            // Default is 30.0
+			desired.PVP.PVPFirearmDamageModifier = nil                          // Default is 50.0
+			desired.AntiCheat.AntiCheatProtectionType2ThresholdMultiplier = nil // Default is 3.0
+
+			diff := SettingsDiff(current, desired)
+			Expect(diff).To(ContainElements(
+				[2]string{"PVPMeleeDamageModifier", "30.0"},
+				[2]string{"PVPFirearmDamageModifier", "50.0"},
+				[2]string{"AntiCheatProtectionType2ThresholdMultiplier", "3.0"},
+			))
+		})
+
+		It("should handle nil boolean values", func() {
+			current.Gameplay.PauseEmpty = ptr.To(false)
+			current.Gameplay.DisplayUserName = ptr.To(false)
+			current.Gameplay.NoFire = ptr.To(true)
+
+			// Leave desired values nil to request defaults
+			desired.Gameplay.PauseEmpty = nil      // Default is true
+			desired.Gameplay.DisplayUserName = nil // Default is true
+			desired.Gameplay.NoFire = nil          // Default is false
+
+			diff := SettingsDiff(current, desired)
+			Expect(diff).To(ContainElements(
+				[2]string{"PauseEmpty", "true"},
+				[2]string{"DisplayUserName", "true"},
+				[2]string{"NoFire", "false"},
+			))
+		})
+
+		It("should handle nil string values", func() {
+			current.Map.Map = ptr.To("Riverside, KY")
+			current.Communication.ChatStreams = ptr.To("s,r,a")
+			current.Steam.SteamScoreboard = ptr.To("false")
+
+			// Leave desired values nil to request defaults
+			desired.Map.Map = nil                   // Default is "Muldraugh, KY"
+			desired.Communication.ChatStreams = nil // Default is "s,r,a,w,y,sh,f,all"
+			desired.Steam.SteamScoreboard = nil     // Default is "true"
+
+			diff := SettingsDiff(current, desired)
+			Expect(diff).To(ContainElements(
+				[2]string{"Map", "Muldraugh, KY"},
+				[2]string{"ChatStreams", "s,r,a,w,y,sh,f,all"},
+				[2]string{"SteamScoreboard", "true"},
+			))
+		})
+
+		It("should not produce diffs when current matches default and desired is nil", func() {
+			// Set current values to match defaults
+			current.Identity.Public = ptr.To(false)                        // Matches default
+			current.Player.MaxPlayers = ptr.To(int32(32))                  // Matches default
+			current.Communication.VoiceMinDistance = ptr.To(float32(10.0)) // Matches default
+
+			// Leave desired values nil
 			desired.Identity.Public = nil
 			desired.Player.MaxPlayers = nil
 			desired.Communication.VoiceMinDistance = nil
 
-			// Set one value to ensure the diff still works for non-nil values
-			current.Identity.PublicName = nil
-			desired.Identity.PublicName = ptr.To("Test")
-
 			diff := SettingsDiff(current, desired)
-			Expect(diff).To(HaveLen(1))
-			Expect(diff).To(ContainElement([2]string{"PublicName", "Test"}))
+			Expect(diff).To(BeEmpty())
 		})
 
 		It("should handle partially nil structs", func() {
-			// Set some values in a struct but leave others nil
-			current.Identity.Public = ptr.To(true)
-			current.Identity.PublicName = ptr.To("Test")
-			current.Identity.PublicDescription = nil
-			desired.Identity.Public = ptr.To(false)
-			desired.Identity.PublicName = nil
-			desired.Identity.PublicDescription = nil
+			// Set some current values different from defaults
+			current.Communication.VoiceEnable = ptr.To(false)               // Default is true
+			current.Communication.VoiceMinDistance = ptr.To(float32(15.0))  // Default is 10.0
+			current.Communication.VoiceMaxDistance = ptr.To(float32(100.0)) // Matches default
+
+			// Mix of nil and non-nil desired values
+			desired.Communication.VoiceEnable = nil                        // Request default (true)
+			desired.Communication.VoiceMinDistance = ptr.To(float32(20.0)) // Explicit new value
+			desired.Communication.VoiceMaxDistance = nil                   // Default matches current, should not appear in diff
 
 			diff := SettingsDiff(current, desired)
-			Expect(diff).To(HaveLen(2))
 			Expect(diff).To(ContainElements(
-				[2]string{"Public", "false"},
-				[2]string{"PublicName", ""},
+				[2]string{"VoiceEnable", "true"},
+				[2]string{"VoiceMinDistance", "20.0"},
 			))
-		})
-
-		Context("when comparing complex settings", func() {
-			It("should handle nil values in Communication settings", func() {
-				// Set some values but leave others nil
-				current.Communication.VoiceEnable = ptr.To(true)
-				current.Communication.VoiceMinDistance = ptr.To(float32(10.0))
-				current.Communication.VoiceMaxDistance = nil
-				desired.Communication.VoiceEnable = nil
-				desired.Communication.VoiceMinDistance = ptr.To(float32(15.0))
-				desired.Communication.VoiceMaxDistance = nil
-
-				diff := SettingsDiff(current, desired)
-				Expect(diff).To(HaveLen(2))
-				Expect(diff).To(ContainElements(
-					[2]string{"VoiceEnable", ""},
-					[2]string{"VoiceMinDistance", "15.0"},
-				))
-			})
-
-			It("should handle nil values in PVP settings", func() {
-				current.PVP.PVP = nil
-				current.PVP.PVPMeleeDamageModifier = ptr.To(float32(30.0))
-				current.PVP.PVPFirearmDamageModifier = nil
-				desired.PVP.PVP = nil
-				desired.PVP.PVPMeleeDamageModifier = ptr.To(float32(40.0))
-				desired.PVP.PVPFirearmDamageModifier = nil
-
-				diff := SettingsDiff(current, desired)
-				Expect(diff).To(HaveLen(1))
-				Expect(diff).To(ContainElement([2]string{"PVPMeleeDamageModifier", "40.0"}))
-			})
-
-			It("should handle nil values in AntiCheat settings", func() {
-				current.AntiCheat.AntiCheatProtectionType1 = ptr.To(true)
-				current.AntiCheat.AntiCheatProtectionType2 = nil
-				current.AntiCheat.AntiCheatProtectionType2ThresholdMultiplier = ptr.To(float32(3.0))
-				desired.AntiCheat.AntiCheatProtectionType1 = ptr.To(false)
-				desired.AntiCheat.AntiCheatProtectionType2 = nil
-				desired.AntiCheat.AntiCheatProtectionType2ThresholdMultiplier = ptr.To(float32(5.0))
-
-				diff := SettingsDiff(current, desired)
-				Expect(diff).To(ContainElements(
-					[2]string{"AntiCheatProtectionType1", "false"},
-					[2]string{"AntiCheatProtectionType2ThresholdMultiplier", "5.0"},
-				))
-				Expect(diff).To(HaveLen(2))
-			})
-		})
-
-		Context("when comparing nested settings", func() {
-			It("should handle nil values in nested structs", func() {
-				// Set some nested values but leave parent structs partially nil
-				current.Identity.PublicName = ptr.To("Test")
-				current.Player = zomboidv1.Player{}     // Empty struct
-				desired.Identity = zomboidv1.Identity{} // Empty struct
-				desired.Player.PingLimit = ptr.To(int32(100))
-
-				diff := SettingsDiff(current, desired)
-				Expect(diff).To(HaveLen(2))
-				Expect(diff).To(ContainElements(
-					[2]string{"PublicName", ""},
-					[2]string{"PingLimit", "100"},
-				))
-			})
-
-			It("should handle completely nil nested structs", func() {
-				current.Logging = zomboidv1.Logging{}
-				current.Moderation = zomboidv1.Moderation{}
-				desired.Logging = zomboidv1.Logging{}
-				desired.Moderation = zomboidv1.Moderation{}
-
-				diff := SettingsDiff(current, desired)
-				Expect(diff).To(BeEmpty())
-			})
-		})
-
-		Context("when comparing string settings", func() {
-			It("should handle nil string values", func() {
-				current.Communication.ServerWelcomeMessage = nil
-				current.Communication.ChatStreams = ptr.To("stream1")
-				desired.Communication.ServerWelcomeMessage = nil
-				desired.Communication.ChatStreams = ptr.To("stream2")
-
-				diff := SettingsDiff(current, desired)
-				Expect(diff).To(HaveLen(1))
-				Expect(diff).To(ContainElement([2]string{"ChatStreams", "stream2"}))
-			})
-
-			It("should handle empty vs nil strings", func() {
-				current.Communication.ServerWelcomeMessage = ptr.To("")
-				desired.Communication.ServerWelcomeMessage = nil
-
-				diff := SettingsDiff(current, desired)
-				Expect(diff).To(BeEmpty())
-			})
-		})
-
-		Context("when comparing numeric settings", func() {
-			It("should handle nil numeric values", func() {
-				current.Player.MaxPlayers = ptr.To(int32(5))
-				current.Communication.VoiceMinDistance = nil
-				desired.Player.MaxPlayers = nil
-				desired.Communication.VoiceMinDistance = ptr.To(float32(10.0))
-
-				diff := SettingsDiff(current, desired)
-				Expect(diff).To(ContainElements(
-					[2]string{"MaxPlayers", ""},
-					[2]string{"VoiceMinDistance", "10.0"},
-				))
-			})
-		})
-
-		Context("when comparing boolean settings", func() {
-			It("should handle nil boolean values", func() {
-				current.Gameplay.PauseEmpty = ptr.To(true)
-				current.Gameplay.NoFire = nil
-				desired.Gameplay.PauseEmpty = nil
-				desired.Gameplay.NoFire = ptr.To(false)
-
-				diff := SettingsDiff(current, desired)
-				Expect(diff).To(ContainElements(
-					[2]string{"PauseEmpty", ""},
-					[2]string{"NoFire", "false"},
-				))
-			})
+			Expect(diff).NotTo(ContainElement(ContainElement("VoiceMaxDistance")))
 		})
 	})
 })

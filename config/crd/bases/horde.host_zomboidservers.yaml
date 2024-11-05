@@ -172,12 +172,6 @@ spec:
                       AntiCheatProtectionType2:
                         default: true
                         type: boolean
-                      AntiCheatProtectionType2ThresholdMultiplier:
-                        default: 3
-                        description: Protection type threshold multipliers
-                        maximum: 10
-                        minimum: 1
-                        type: number
                       AntiCheatProtectionType3:
                         default: true
                         type: boolean
@@ -276,6 +270,12 @@ spec:
                         type: boolean
                       AntiCheatProtectionType24ThresholdMultiplier:
                         default: 6
+                        maximum: 10
+                        minimum: 1
+                        type: number
+                      AntiCheatProtectionType2ThresholdMultiplier:
+                        default: 3
+                        description: Protection type threshold multipliers
                         maximum: 10
                         minimum: 1
                         type: number
@@ -511,7 +511,6 @@ spec:
                         description: PublicName is the server name shown in browsers
                         type: string
                       ResetID:
-                        default: 485871306
                         description: ResetID determines if server has undergone soft-reset.
                           If this number doesn't match client, client must create
                           new character.
@@ -520,7 +519,6 @@ spec:
                         minimum: 0
                         type: integer
                       ServerPlayerID:
-                        default: 63827612
                         description: ServerPlayerID identifies characters from different
                           servers. Used with ResetID.
                         format: int32
@@ -939,7 +937,8 @@ spec:
                   players
                 type: boolean
               settings:
-                description: Settings contains the server's current settings
+                description: Settings contains the server's current settings, if they
+                  have ever been observed
                 properties:
                   antiCheat:
                     description: AntiCheat configures the anti-cheat protection system
@@ -952,12 +951,6 @@ spec:
                       AntiCheatProtectionType2:
                         default: true
                         type: boolean
-                      AntiCheatProtectionType2ThresholdMultiplier:
-                        default: 3
-                        description: Protection type threshold multipliers
-                        maximum: 10
-                        minimum: 1
-                        type: number
                       AntiCheatProtectionType3:
                         default: true
                         type: boolean
@@ -1056,6 +1049,12 @@ spec:
                         type: boolean
                       AntiCheatProtectionType24ThresholdMultiplier:
                         default: 6
+                        maximum: 10
+                        minimum: 1
+                        type: number
+                      AntiCheatProtectionType2ThresholdMultiplier:
+                        default: 3
+                        description: Protection type threshold multipliers
                         maximum: 10
                         minimum: 1
                         type: number
@@ -1291,7 +1290,6 @@ spec:
                         description: PublicName is the server name shown in browsers
                         type: string
                       ResetID:
-                        default: 485871306
                         description: ResetID determines if server has undergone soft-reset.
                           If this number doesn't match client, client must create
                           new character.
@@ -1300,7 +1298,6 @@ spec:
                         minimum: 0
                         type: integer
                       ServerPlayerID:
-                        default: 63827612
                         description: ServerPlayerID identifies characters from different
                           servers. Used with ResetID.
                         format: int32

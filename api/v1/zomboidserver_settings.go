@@ -1,75 +1,97 @@
 package v1
 
+import "k8s.io/utils/ptr"
+
 type ZomboidSettings struct {
 	// Identity contains settings about how the server is identified and accessed
 	// +optional
-	Identity Identity `json:"identity"`
+	Identity Identity `json:"identity,omitempty"`
 
 	// Player contains player management settings
 	// +optional
-	Player Player `json:"player"`
+	Player Player `json:"player,omitempty"`
 
 	// Map contains map configuration settings
 	// +optional
-	Map Map `json:"map"`
+	Map Map `json:"map,omitempty"`
 
 	// Mods contains mod configuration settings using the classic format of parallel mod/workshop lists.
 	// This is the traditional way to specify mods in the server.ini but is less structured. Consider using WorkshopMods instead.
 	// +optional
-	Mods Mods `json:"mods"`
+	Mods Mods `json:"mods,omitempty"`
 
 	// WorkshopMods contains Steam Workshop mods in a structured format.
 	// This is the recommended way to specify mods for the zomboid-operator, as it provides better organization and validation.
 	// +optional
-	WorkshopMods []WorkshopMod `json:"workshopMods"`
+	WorkshopMods []WorkshopMod `json:"workshopMods,omitempty"`
 
 	// Backup contains backup-related server settings
 	// +optional
-	Backup Backup `json:"backup"`
+	Backup Backup `json:"backup,omitempty"`
 
 	// Logging contains logging configuration settings
 	// +optional
-	Logging Logging `json:"logging"`
+	Logging Logging `json:"logging,omitempty"`
 
 	// Moderation contains admin and moderation settings
 	// +optional
-	Moderation Moderation `json:"moderation"`
+	Moderation Moderation `json:"moderation,omitempty"`
 
 	// Steam contains Steam-specific settings and anti-cheat
 	// +optional
-	Steam Steam `json:"steam"`
+	Steam Steam `json:"steam,omitempty"`
 
 	// Discord contains Discord integration settings
 	// +optional
-	Discord Discord `json:"discord"`
+	Discord Discord `json:"discord,omitempty"`
 
 	// Communication contains chat and VOIP settings
 	// +optional
-	Communication Communication `json:"communication"`
+	Communication Communication `json:"communication,omitempty"`
 
 	// Gameplay contains general gameplay rules and settings
 	// +optional
-	Gameplay Gameplay `json:"gameplay"`
+	Gameplay Gameplay `json:"gameplay,omitempty"`
 
 	// PVP contains PVP-specific settings
 	// +optional
-	PVP PVP `json:"pvp"`
+	PVP PVP `json:"pvp,omitempty"`
 
 	// Loot contains loot-related settings
 	// +optional
-	Loot Loot `json:"loot"`
+	Loot Loot `json:"loot,omitempty"`
 
 	// Safehouse contains safehouse-related settings
 	// +optional
-	Safehouse Safehouse `json:"safehouse"`
+	Safehouse Safehouse `json:"safehouse,omitempty"`
 
 	// Faction contains faction-related settings
 	// +optional
-	Faction Faction `json:"faction"`
+	Faction Faction `json:"faction,omitempty"`
 
 	// AntiCheat configures the anti-cheat protection system
 	// +optional
-	AntiCheat AntiCheat `json:"antiCheat"`
+	AntiCheat AntiCheat `json:"antiCheat,omitempty"`
+}
+
+var DefaultZomboidSettings = ZomboidSettings{
+	Identity:      DefaultIdentity,
+	Player:        DefaultPlayer,
+	Map:           DefaultMap,
+	Mods:          DefaultMods,
+	WorkshopMods:  []WorkshopMod{},
+	Backup:        DefaultBackup,
+	Logging:       DefaultLogging,
+	Moderation:    DefaultModeration,
+	Steam:         DefaultSteam,
+	Discord:       DefaultDiscord,
+	Communication: DefaultCommunication,
+	Gameplay:      DefaultGameplay,
+	PVP:           DefaultPVP,
+	Safehouse:     DefaultSafehouse,
+	Faction:       DefaultFaction,
+	Loot:          DefaultLoot,
+	AntiCheat:     DefaultAntiCheat,
 }
 
 // Identity controls how your server appears in server browsers and handles player authentication,
@@ -92,16 +114,19 @@ type Identity struct {
 	// ResetID determines if server has undergone soft-reset. If this number doesn't match client, client must create new character.
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:validation:Maximum=2147483647
-	// +kubebuilder:default=485871306
 	// +optional
 	ResetID *int32 `json:"ResetID,omitempty"`
 
 	// ServerPlayerID identifies characters from different servers. Used with ResetID.
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:validation:Maximum=2147483647
-	// +kubebuilder:default=63827612
 	// +optional
 	ServerPlayerID *int32 `json:"ServerPlayerID,omitempty"`
+}
+
+var DefaultIdentity = Identity{
+	Public:     ptr.To(false),
+	PublicName: ptr.To("My PZ Server"),
 }
 
 // Player manages the core multiplayer experience including server capacity, connection requirements,
@@ -171,6 +196,20 @@ type Player struct {
 	LoginQueueConnectTimeout *int32 `json:"LoginQueueConnectTimeout,omitempty"`
 }
 
+var DefaultPlayer = Player{
+	MaxPlayers:                  ptr.To(int32(32)),
+	PingLimit:                   ptr.To(int32(400)),
+	Open:                        ptr.To(true),
+	AutoCreateUserInWhiteList:   ptr.To(false),
+	DropOffWhiteListAfterDeath:  ptr.To(false),
+	MaxAccountsPerUser:          ptr.To(int32(0)),
+	AllowCoop:                   ptr.To(true),
+	AllowNonAsciiUsername:       ptr.To(false),
+	DenyLoginOnOverloadedServer: ptr.To(true),
+	LoginQueueEnabled:           ptr.To(false),
+	LoginQueueConnectTimeout:    ptr.To(int32(60)),
+}
+
 // Map specifies which game world players will spawn into and explore,
 // supporting both vanilla maps and custom map mods from the Steam Workshop
 type Map struct {
@@ -178,6 +217,10 @@ type Map struct {
 	// +kubebuilder:default="Muldraugh, KY"
 	// +optional
 	Map *string `json:"Map,omitempty"`
+}
+
+var DefaultMap = Map{
+	Map: ptr.To("Muldraugh, KY"),
 }
 
 // Mods provides two parallel lists for managing Steam Workshop content:
@@ -190,6 +233,11 @@ type Mods struct {
 	// Mods lists mod loading IDs. Found in Steam/steamapps/workshop/modID/mods/modName/info.txt
 	// +optional
 	Mods *string `json:"Mods,omitempty"`
+}
+
+var DefaultMods = Mods{
+	Mods:          ptr.To(""),
+	WorkshopItems: ptr.To(""),
 }
 
 // WorkshopMod pairs a mod's loading ID with its Steam Workshop ID,
@@ -241,6 +289,14 @@ type Backup struct {
 	BackupsPeriod *int32 `json:"BackupsPeriod,omitempty"`
 }
 
+var DefaultBackup = Backup{
+	SaveWorldEveryMinutes:  ptr.To(int32(0)),
+	BackupsCount:           ptr.To(int32(5)),
+	BackupsOnStart:         ptr.To(true),
+	BackupsOnVersionChange: ptr.To(true),
+	BackupsPeriod:          ptr.To(int32(0)),
+}
+
 // Logging configures what client actions and commands are logged to files
 type Logging struct {
 	// PerkLogs enables tracking player perk changes in PerkLog.txt
@@ -257,6 +313,12 @@ type Logging struct {
 	// +kubebuilder:default="ISEnterVehicle;ISExitVehicle;ISTakeEngineParts;"
 	// +optional
 	ClientActionLogs *string `json:"ClientActionLogs,omitempty"`
+}
+
+var DefaultLogging = Logging{
+	PerkLogs:            ptr.To(true),
+	ClientCommandFilter: ptr.To("-vehicle.*;+vehicle.damageWindow;+vehicle.fixPart;+vehicle.installPart;+vehicle.uninstallPart"),
+	ClientActionLogs:    ptr.To("ISEnterVehicle;ISExitVehicle;ISTakeEngineParts;"),
 }
 
 // Moderation customizes staff member capabilities and restrictions,
@@ -298,6 +360,16 @@ type Moderation struct {
 	BanKickGlobalSound *bool `json:"BanKickGlobalSound,omitempty"`
 }
 
+var DefaultModeration = Moderation{
+	DisableRadioStaff:     ptr.To(false),
+	DisableRadioAdmin:     ptr.To(true),
+	DisableRadioGM:        ptr.To(true),
+	DisableRadioOverseer:  ptr.To(false),
+	DisableRadioModerator: ptr.To(false),
+	DisableRadioInvisible: ptr.To(true),
+	BanKickGlobalSound:    ptr.To(true),
+}
+
 // Steam manages Steam platform integration and anti-cheat measures,
 // including VAC and player visibility settings
 type Steam struct {
@@ -305,6 +377,10 @@ type Steam struct {
 	// +kubebuilder:default="true"
 	// +optional
 	SteamScoreboard *string `json:"SteamScoreboard,omitempty"`
+}
+
+var DefaultSteam = Steam{
+	SteamScoreboard: ptr.To("true"),
 }
 
 // Discord enables and configures integration with Discord,
@@ -326,6 +402,10 @@ type Discord struct {
 	// DiscordChannelID is the Discord channel ID. Use if having difficulties with channel name.
 	// +optional
 	DiscordChannelID *string `json:"DiscordChannelID,omitempty"`
+}
+
+var DefaultDiscord = Discord{
+	DiscordEnable: ptr.To(false),
 }
 
 // Communication manages all player interaction features including global chat,
@@ -368,6 +448,15 @@ type Communication struct {
 	// +kubebuilder:default=true
 	// +optional
 	Voice3D *bool `json:"Voice3D,omitempty"`
+}
+
+var DefaultCommunication = Communication{
+	GlobalChat:       ptr.To(true),
+	ChatStreams:      ptr.To("s,r,a,w,y,sh,f,all"),
+	VoiceEnable:      ptr.To(true),
+	VoiceMinDistance: ptr.To(float32(10.00)),
+	VoiceMaxDistance: ptr.To(float32(100.00)),
+	Voice3D:          ptr.To(true),
 }
 
 // Gameplay controls fundamental aspects of the player experience including
@@ -469,6 +558,26 @@ type Gameplay struct {
 	FastForwardMultiplier *float32 `json:"FastForwardMultiplier,omitempty"`
 }
 
+var DefaultGameplay = Gameplay{
+	PauseEmpty:                     ptr.To(true),
+	DisplayUserName:                ptr.To(true),
+	ShowFirstAndLastName:           ptr.To(false),
+	SpawnPoint:                     ptr.To("0,0,0"),
+	NoFire:                         ptr.To(false),
+	AnnounceDeath:                  ptr.To(false),
+	MinutesPerPage:                 ptr.To(float32(1.00)),
+	AllowDestructionBySledgehammer: ptr.To(true),
+	SledgehammerOnlyInSafehouse:    ptr.To(false),
+	SleepAllowed:                   ptr.To(false),
+	SleepNeeded:                    ptr.To(false),
+	KnockedDownAllowed:             ptr.To(true),
+	SneakModeHideFromOtherPlayers:  ptr.To(true),
+	SpeedLimit:                     ptr.To(float32(70.00)),
+	PlayerRespawnWithSelf:          ptr.To(false),
+	PlayerRespawnWithOther:         ptr.To(false),
+	FastForwardMultiplier:          ptr.To(float32(40.00)),
+}
+
 // PVP fine-tunes player versus player combat with safety systems,
 // damage modifiers, and combat mechanics
 type PVP struct {
@@ -519,6 +628,17 @@ type PVP struct {
 	// +kubebuilder:default=false
 	// +optional
 	PVPMeleeWhileHitReaction *bool `json:"PVPMeleeWhileHitReaction,omitempty"`
+}
+
+var DefaultPVP = PVP{
+	PVP:                      ptr.To(true),
+	SafetySystem:             ptr.To(true),
+	ShowSafety:               ptr.To(true),
+	SafetyToggleTimer:        ptr.To(int32(2)),
+	SafetyCooldownTimer:      ptr.To(int32(3)),
+	PVPMeleeDamageModifier:   ptr.To(float32(30.00)),
+	PVPFirearmDamageModifier: ptr.To(float32(50.00)),
+	PVPMeleeWhileHitReaction: ptr.To(false),
 }
 
 // Safehouse manages player-claimed safe areas including access permissions,
@@ -579,6 +699,19 @@ type Safehouse struct {
 	DisableSafehouseWhenPlayerConnected *bool `json:"DisableSafehouseWhenPlayerConnected,omitempty"`
 }
 
+var DefaultSafehouse = Safehouse{
+	PlayerSafehouse:                     ptr.To(false),
+	AdminSafehouse:                      ptr.To(false),
+	SafehouseAllowTrepass:               ptr.To(true),
+	SafehouseAllowFire:                  ptr.To(true),
+	SafehouseAllowLoot:                  ptr.To(true),
+	SafehouseAllowRespawn:               ptr.To(false),
+	SafehouseDaySurvivedToClaim:         ptr.To(int32(0)),
+	SafeHouseRemovalTime:                ptr.To(int32(144)),
+	SafehouseAllowNonResidential:        ptr.To(false),
+	DisableSafehouseWhenPlayerConnected: ptr.To(false),
+}
+
 // Faction configures the player group system including creation requirements
 // and the number of members needed for faction tags to appear
 type Faction struct {
@@ -600,6 +733,12 @@ type Faction struct {
 	// +kubebuilder:default=1
 	// +optional
 	FactionPlayersRequiredForTag *int32 `json:"FactionPlayersRequiredForTag,omitempty"`
+}
+
+var DefaultFaction = Faction{
+	Faction:                      ptr.To(true),
+	FactionDaySurvivedToCreate:   ptr.To(int32(0)),
+	FactionPlayersRequiredForTag: ptr.To(int32(1)),
 }
 
 // Loot manages the respawning and limitations of items in containers,
@@ -635,6 +774,14 @@ type Loot struct {
 	// +kubebuilder:default=false
 	// +optional
 	TrashDeleteAll *bool `json:"TrashDeleteAll,omitempty"`
+}
+
+var DefaultLoot = Loot{
+	HoursForLootRespawn:             ptr.To(int32(0)),
+	MaxItemsForLootRespawn:          ptr.To(int32(4)),
+	ConstructionPreventsLootRespawn: ptr.To(true),
+	ItemNumbersLimitPerContainer:    ptr.To(int32(0)),
+	TrashDeleteAll:                  ptr.To(false),
 }
 
 // AntiCheat configures the 24 different protection types and their thresholds
@@ -764,4 +911,41 @@ type AntiCheat struct {
 	// +kubebuilder:default=6.00
 	// +optional
 	AntiCheatProtectionType24ThresholdMultiplier *float32 `json:"AntiCheatProtectionType24ThresholdMultiplier,omitempty"`
+}
+
+var DefaultAntiCheat = AntiCheat{
+	DoLuaChecksum:                                ptr.To(true),
+	KickFastPlayers:                              ptr.To(false),
+	AntiCheatProtectionType1:                     ptr.To(true),
+	AntiCheatProtectionType2:                     ptr.To(true),
+	AntiCheatProtectionType3:                     ptr.To(true),
+	AntiCheatProtectionType4:                     ptr.To(true),
+	AntiCheatProtectionType5:                     ptr.To(true),
+	AntiCheatProtectionType6:                     ptr.To(true),
+	AntiCheatProtectionType7:                     ptr.To(true),
+	AntiCheatProtectionType8:                     ptr.To(true),
+	AntiCheatProtectionType9:                     ptr.To(true),
+	AntiCheatProtectionType10:                    ptr.To(true),
+	AntiCheatProtectionType11:                    ptr.To(true),
+	AntiCheatProtectionType12:                    ptr.To(true),
+	AntiCheatProtectionType13:                    ptr.To(true),
+	AntiCheatProtectionType14:                    ptr.To(true),
+	AntiCheatProtectionType15:                    ptr.To(true),
+	AntiCheatProtectionType16:                    ptr.To(true),
+	AntiCheatProtectionType17:                    ptr.To(true),
+	AntiCheatProtectionType18:                    ptr.To(true),
+	AntiCheatProtectionType19:                    ptr.To(true),
+	AntiCheatProtectionType20:                    ptr.To(true),
+	AntiCheatProtectionType21:                    ptr.To(true),
+	AntiCheatProtectionType22:                    ptr.To(true),
+	AntiCheatProtectionType23:                    ptr.To(true),
+	AntiCheatProtectionType24:                    ptr.To(true),
+	AntiCheatProtectionType2ThresholdMultiplier:  ptr.To(float32(3.00)),
+	AntiCheatProtectionType3ThresholdMultiplier:  ptr.To(float32(1.00)),
+	AntiCheatProtectionType4ThresholdMultiplier:  ptr.To(float32(1.00)),
+	AntiCheatProtectionType9ThresholdMultiplier:  ptr.To(float32(1.00)),
+	AntiCheatProtectionType15ThresholdMultiplier: ptr.To(float32(1.00)),
+	AntiCheatProtectionType20ThresholdMultiplier: ptr.To(float32(1.00)),
+	AntiCheatProtectionType22ThresholdMultiplier: ptr.To(float32(1.00)),
+	AntiCheatProtectionType24ThresholdMultiplier: ptr.To(float32(6.00)),
 }

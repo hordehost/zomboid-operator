@@ -58,9 +58,9 @@ type ZomboidServerStatus struct {
 	// +optional
 	SettingsLastObserved *metav1.Time `json:"settingsLastObserved,omitempty"`
 
-	// Settings contains the server's current settings
+	// Settings contains the server's current settings, if they have ever been observed
 	// +optional
-	Settings ZomboidSettings `json:"settings,omitempty"`
+	Settings *ZomboidSettings `json:"settings,omitempty"`
 
 	// Conditions represent the latest available observations of the ZomboidServer's current state.
 	// +optional
