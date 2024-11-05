@@ -1,9 +1,8 @@
 name: Release
 
 on:
-  push:
-    tags:
-      - "v*"
+  release:
+    types: [published]
 
 jobs:
   test:
@@ -49,7 +48,7 @@ jobs:
             hordehost/zomboid-operator:latest
             hordehost/zomboid-operator:${{ steps.version.outputs.VERSION }}
 
-  release:
+  update-release:
     needs: build-and-push
     runs-on: ubuntu-latest
     steps:
@@ -70,9 +69,12 @@ jobs:
         run: |
           make build-installer
 
-      - name: Create Release
-        uses: softprops/action-gh-release@v1
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          generate_release_notes: true
-          files: |
-            dist/install.yaml
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: ./dist/install.yaml
+          asset_name: install.yaml
+          asset_content_type: application/yaml
