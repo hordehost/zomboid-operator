@@ -11,9 +11,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
-// GetServerOptions connects to an RCON server, executes the showoptions command,
-// and returns the output. It handles connection and cleanup automatically.
-func GetServerOptions(hostname string, port int, password string) (zomboidv1.ZomboidSettings, error) {
+// ReadServerOptions connects to an RCON server, executes the showoptions command,
+// and updates the provided settings object with the current server settings.
+func ReadServerOptions(hostname string, port int, password string, settings *zomboidv1.ZomboidSettings) error {
 	address := fmt.Sprintf("%s:%d", hostname, port)
 
 	conn, err := rcon.Dial(
@@ -22,21 +22,21 @@ func GetServerOptions(hostname string, port int, password string) (zomboidv1.Zom
 		rcon.SetDeadline(5*time.Second),
 	)
 	if err != nil {
-		return zomboidv1.ZomboidSettings{}, fmt.Errorf("failed to connect to RCON server: %w", err)
+		return fmt.Errorf("failed to connect to RCON server: %w", err)
 	}
 	defer conn.Close()
 
 	response, err := conn.Execute("showoptions")
 	if err != nil {
-		return zomboidv1.ZomboidSettings{}, fmt.Errorf("failed to execute showoptions command: %w", err)
+		return fmt.Errorf("failed to execute showoptions command: %w", err)
 	}
 
-	return ParseRCONShowOptions(response), nil
+	ParseRCONShowOptions(response, settings)
+	return nil
 }
 
-// ParseRCONShowOptions parses the output of the RCON "showoptions" command into server settings
-func ParseRCONShowOptions(output string) zomboidv1.ZomboidSettings {
-	settings := zomboidv1.ZomboidSettings{}
+// ParseRCONShowOptions parses the output of the RCON "showoptions" command into the provided settings object
+func ParseRCONShowOptions(output string, settings *zomboidv1.ZomboidSettings) {
 	lines := strings.Split(output, "\n")
 
 	for _, line := range lines {
@@ -57,15 +57,13 @@ func ParseRCONShowOptions(output string) zomboidv1.ZomboidSettings {
 		value := strings.TrimSpace(parts[1])
 
 		if value != "" {
-			ParseSettingValue(&settings, key, value)
+			ParseSettingValue(settings, key, value)
 		}
 	}
-
-	return settings
 }
 
 // ApplySettingsUpdates connects to an RCON server and applies the given settings changes
-func ApplySettingsUpdates(ctx context.Context, hostname string, port int, password string, updates [][2]string) error {
+func ApplySettingsUpdates(ctx context.Context, hostname string, port int, password string, updates [][2]string, settings *zomboidv1.ZomboidSettings) error {
 	address := fmt.Sprintf("%s:%d", hostname, port)
 
 	conn, err := rcon.Dial(
@@ -84,9 +82,27 @@ func ApplySettingsUpdates(ctx context.Context, hostname string, port int, passwo
 		settingName := update[0]
 		settingValue := update[1]
 
-		command := fmt.Sprintf("changeoption %s %s", settingName, settingValue)
-		if _, err := conn.Execute(command); err != nil {
+		command := fmt.Sprintf("changeoption %s \"%s\"", settingName, settingValue)
+		resultLine, err := conn.Execute(command)
+		if err != nil {
 			return fmt.Errorf("failed to execute RCON command %q: %w", command, err)
+		}
+
+		parts := strings.Split(resultLine, " : ")
+		if len(parts) != 3 {
+			return fmt.Errorf("unexpected RCON response format: %s", resultLine)
+		}
+
+		newValue := strings.TrimSpace(parts[2])
+		// If the desired setting was "", that means we want to remove the setting from the server
+		// and return to the default value.
+		if settingValue != "" && newValue != settingValue {
+			return fmt.Errorf("setting %s was not updated correctly. Expected %q but got %q", settingName, settingValue, newValue)
+		}
+
+		// Update the settings object with the confirmed value
+		if settings != nil {
+			ParseSettingValue(settings, settingName, newValue)
 		}
 
 		logger.Info("Applied setting change", "setting", settingName, "value", settingValue)

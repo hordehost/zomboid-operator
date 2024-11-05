@@ -159,15 +159,6 @@ func (r *ZomboidServerReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return r.status(ctx, zomboidServer, &ctrl.Result{}, err)
 	}
 
-	// Now observe current settings again to make sure they're up to date
-	result, err = r.observeCurrentSettings(ctx, zomboidServer)
-	if result != nil {
-		return r.status(ctx, zomboidServer, result, err)
-	}
-	if err != nil {
-		return r.status(ctx, zomboidServer, &ctrl.Result{}, err)
-	}
-
 	// By default, requeue to poll for new setting updates
 	return r.status(ctx, zomboidServer, &ctrl.Result{RequeueAfter: 15 * time.Second}, nil)
 }
@@ -547,8 +538,6 @@ func (r *ZomboidServerReconciler) observeCurrentSettings(ctx context.Context, zo
 
 	// TODO: how to distinguish between local development and in-cluster?
 	if true {
-		// For local development from a host, we need a port-forwarder to the RCON service
-		// so that we can connect to it.
 		parts := strings.Split(hostname, ".")
 		localPort, cleanup, err := SetupPortForwarder(ctx, r.Config, r.Client, parts[1], parts[0], port)
 		if err != nil {
@@ -560,14 +549,11 @@ func (r *ZomboidServerReconciler) observeCurrentSettings(ctx context.Context, zo
 		port = localPort
 	}
 
-	settings, err := settings.GetServerOptions(hostname, port, password)
-	if err != nil {
+	if err := settings.ReadServerOptions(hostname, port, password, &zomboidServer.Status.Settings); err != nil {
 		return nil, err
 	}
 
 	zomboidServer.Status.SettingsLastObserved = &metav1.Time{Time: time.Now()}
-	zomboidServer.Status.Settings = settings
-
 	return nil, nil
 }
 
@@ -576,15 +562,15 @@ func (r *ZomboidServerReconciler) reconcileDesiredSettings(ctx context.Context, 
 		return nil, nil
 	}
 
-	password, err := r.getRCONPassword(ctx, zomboidServer)
-	if err != nil {
-		return nil, err
-	}
-
 	// Calculate differences between current and desired settings
 	updates := settings.SettingsDiff(zomboidServer.Status.Settings, zomboidServer.Spec.Settings)
 	if len(updates) == 0 {
 		return nil, nil
+	}
+
+	password, err := r.getRCONPassword(ctx, zomboidServer)
+	if err != nil {
+		return nil, err
 	}
 
 	// Setup RCON connection details
@@ -604,9 +590,12 @@ func (r *ZomboidServerReconciler) reconcileDesiredSettings(ctx context.Context, 
 		port = localPort
 	}
 
-	if err := settings.ApplySettingsUpdates(ctx, hostname, port, password, updates); err != nil {
+	if err := settings.ApplySettingsUpdates(ctx, hostname, port, password, updates, &zomboidServer.Status.Settings); err != nil {
 		return nil, err
 	}
+
+	// The settings have already been updated, so we can update the observation time
+	zomboidServer.Status.SettingsLastObserved = &metav1.Time{Time: time.Now()}
 
 	return nil, nil
 }

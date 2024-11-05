@@ -59,7 +59,7 @@ var _ = Describe("RCON Settings Parser", func() {
 	var settings zomboidv1.ZomboidSettings
 
 	BeforeEach(func() {
-		settings = ParseRCONShowOptions(sampleRCONOutput)
+		ParseRCONShowOptions(sampleRCONOutput, &settings)
 	})
 
 	Context("when parsing RCON output", func() {
