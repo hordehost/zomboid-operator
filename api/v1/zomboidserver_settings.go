@@ -422,6 +422,7 @@ type Communication struct {
 	ChatStreams *string `json:"ChatStreams,omitempty"`
 
 	// ServerWelcomeMessage is shown to players on login. Use <LINE> for newlines and <RGB:r,g,b> for colors.
+	// +kubebuilder:default="Welcome to Project Zomboid Multiplayer! <LINE> <LINE> To interact with the Chat panel: press Tab, T, or Enter. <LINE> <LINE> The Tab key will change the target stream of the message. <LINE> <LINE> Global Streams: /all <LINE> Local Streams: /say, /yell <LINE> Special Steams: /whisper, /safehouse, /faction. <LINE> <LINE> Press the Up arrow to cycle through your message history. Click the Gear icon to customize chat. <LINE> <LINE> Happy surviving!"
 	// +optional
 	ServerWelcomeMessage *string `json:"ServerWelcomeMessage,omitempty"`
 
@@ -451,12 +452,13 @@ type Communication struct {
 }
 
 var DefaultCommunication = Communication{
-	GlobalChat:       ptr.To(true),
-	ChatStreams:      ptr.To("s,r,a,w,y,sh,f,all"),
-	VoiceEnable:      ptr.To(true),
-	VoiceMinDistance: ptr.To(float32(10.00)),
-	VoiceMaxDistance: ptr.To(float32(100.00)),
-	Voice3D:          ptr.To(true),
+	GlobalChat:           ptr.To(true),
+	ChatStreams:          ptr.To("s,r,a,w,y,sh,f,all"),
+	ServerWelcomeMessage: ptr.To("Welcome to Project Zomboid Multiplayer! <LINE> <LINE> To interact with the Chat panel: press Tab, T, or Enter. <LINE> <LINE> The Tab key will change the target stream of the message. <LINE> <LINE> Global Streams: /all <LINE> Local Streams: /say, /yell <LINE> Special Steams: /whisper, /safehouse, /faction. <LINE> <LINE> Press the Up arrow to cycle through your message history. Click the Gear icon to customize chat. <LINE> <LINE> Happy surviving!"),
+	VoiceEnable:          ptr.To(true),
+	VoiceMinDistance:     ptr.To(float32(10.00)),
+	VoiceMaxDistance:     ptr.To(float32(100.00)),
+	Voice3D:              ptr.To(true),
 }
 
 // Gameplay controls fundamental aspects of the player experience including

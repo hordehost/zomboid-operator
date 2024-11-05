@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -19,7 +20,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -80,17 +80,20 @@ func (r *ZomboidServerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 // +kubebuilder:rbac:groups=horde.host,resources=zomboidservers/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=horde.host,resources=zomboidservers/finalizers,verbs=update
 
+// +kubebuilder:rbac:groups="",resources=services,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups="",resources=persistentvolumeclaims,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch
+// +kubebuilder:rbac:groups="",resources=pods,verbs=get;list;watch
+
 // Reconcile is the main function that reconciles a ZomboidServer resource
 func (r *ZomboidServerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	var err error
-
-	logger := log.FromContext(ctx)
 
 	zomboidServer := &zomboidv1.ZomboidServer{}
 	err = r.Get(ctx, req.NamespacedName, zomboidServer)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			logger.Info("ZomboidServer not found", "name", req.NamespacedName)
 			return ctrl.Result{}, nil
 		}
 		return ctrl.Result{}, err
@@ -516,6 +519,20 @@ func (r *ZomboidServerReconciler) getRCONPassword(ctx context.Context, zomboidSe
 	return password, nil
 }
 
+func (r *ZomboidServerReconciler) isRunningInCluster() bool {
+	// If running in a pod, this env var will be set
+	if os.Getenv("KUBERNETES_SERVICE_HOST") != "" {
+		return true
+	}
+
+	// Alternatively, check if the serviceaccount token exists
+	if _, err := os.Stat("/var/run/secrets/kubernetes.io/serviceaccount/token"); err == nil {
+		return true
+	}
+
+	return false
+}
+
 func (r *ZomboidServerReconciler) observeCurrentSettings(ctx context.Context, zomboidServer *zomboidv1.ZomboidServer) (*ctrl.Result, error) {
 	if zomboidServer == nil {
 		return nil, nil
@@ -534,8 +551,8 @@ func (r *ZomboidServerReconciler) observeCurrentSettings(ctx context.Context, zo
 	hostname := fmt.Sprintf("%s-rcon.%s.svc.cluster.local", zomboidServer.Name, zomboidServer.Namespace)
 	port := 27015
 
-	// TODO: how to distinguish between local development and in-cluster?
-	if true {
+	// Replace the hardcoded "true" with the actual check
+	if !r.isRunningInCluster() {
 		parts := strings.Split(hostname, ".")
 		localPort, cleanup, err := SetupPortForwarder(ctx, r.Config, r.Client, parts[1], parts[0], port)
 		if err != nil {
@@ -571,10 +588,14 @@ func (r *ZomboidServerReconciler) applyDesiredSettings(ctx context.Context, zomb
 		return nil, nil
 	}
 
-	// Special case: if the user isn't specifying a ResetID, backfill it with the observed value
-	// Because it was a server-generated unique ID, we can't assume there's a default
-	if specSettings.Identity.ResetID == nil {
-		zomboidServer.Spec.Settings.Identity.ResetID = statusSettings.Identity.ResetID
+	// Special cases: if the user isn't specifying a ResetID or ServerPlayerID, backfill
+	// it with the observed value, because it was a server-generated unique ID, we can't
+	// assume there's a default
+	if specSettings.Identity.ResetID == nil && statusSettings.Identity.ResetID != nil {
+		specSettings.Identity.ResetID = ptr.To(*statusSettings.Identity.ResetID)
+	}
+	if specSettings.Identity.ServerPlayerID == nil && statusSettings.Identity.ServerPlayerID != nil {
+		specSettings.Identity.ServerPlayerID = ptr.To(*statusSettings.Identity.ServerPlayerID)
 	}
 
 	// Calculate differences between current and desired settings
@@ -592,8 +613,8 @@ func (r *ZomboidServerReconciler) applyDesiredSettings(ctx context.Context, zomb
 	hostname := fmt.Sprintf("%s-rcon.%s.svc.cluster.local", zomboidServer.Name, zomboidServer.Namespace)
 	port := 27015
 
-	// TODO: how to distinguish between local development and in-cluster?
-	if true {
+	// Replace the hardcoded "true" with the actual check
+	if !r.isRunningInCluster() {
 		parts := strings.Split(hostname, ".")
 		localPort, cleanup, err := SetupPortForwarder(ctx, r.Config, r.Client, parts[1], parts[0], port)
 		if err != nil {
