@@ -54,9 +54,6 @@ func SettingsDiff(current, desired zomboidv1.ZomboidSettings) [][2]string {
 	addIfDifferent("Mods", current.Mods.Mods, desired.Mods.Mods, zomboidv1.DefaultMods.Mods)
 	addIfDifferent("WorkshopItems", current.Mods.WorkshopItems, desired.Mods.WorkshopItems, zomboidv1.DefaultMods.WorkshopItems)
 
-	// WorkshopMods settings
-	addIfDifferent("WorkshopMods", current.WorkshopMods, desired.WorkshopMods, zomboidv1.DefaultZomboidSettings.WorkshopMods)
-
 	// Backup settings
 	addIfDifferent("SaveWorldEveryMinutes", current.Backup.SaveWorldEveryMinutes, desired.Backup.SaveWorldEveryMinutes, zomboidv1.DefaultBackup.SaveWorldEveryMinutes)
 	addIfDifferent("BackupsCount", current.Backup.BackupsCount, desired.Backup.BackupsCount, zomboidv1.DefaultBackup.BackupsCount)
