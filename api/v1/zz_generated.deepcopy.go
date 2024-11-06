@@ -1007,6 +1007,11 @@ func (in *ZomboidServerSpec) DeepCopyInto(out *ZomboidServerSpec) {
 		*out = new(corev1.SecretKeySelector)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.Suspended != nil {
+		in, out := &in.Suspended, &out.Suspended
+		*out = new(bool)
+		**out = **in
+	}
 	in.Settings.DeepCopyInto(&out.Settings)
 }
 

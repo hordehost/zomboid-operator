@@ -24,6 +24,10 @@ type ZomboidServerSpec struct {
 	// +optional
 	Password *corev1.SecretKeySelector `json:"password,omitempty"`
 
+	// Suspended indicates whether the server should be running. If true, the server will be stopped.
+	// +optional
+	Suspended *bool `json:"suspended,omitempty"`
+
 	// Settings contains the server's current settings
 	// +optional
 	Settings ZomboidSettings `json:"settings,omitempty"`

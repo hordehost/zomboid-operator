@@ -400,8 +400,13 @@ func (r *ZomboidServerReconciler) reconcileDeployment(ctx context.Context, zombo
 			}
 		}
 
+		replicas := int32(1)
+		if zomboidServer.Spec.Suspended != nil && *zomboidServer.Spec.Suspended {
+			replicas = 0
+		}
+
 		deployment.Spec = appsv1.DeploymentSpec{
-			Replicas: ptr.To(int32(1)),
+			Replicas: ptr.To(replicas),
 			Strategy: appsv1.DeploymentStrategy{
 				Type: appsv1.RecreateDeploymentStrategyType,
 			},
@@ -479,11 +484,11 @@ func (r *ZomboidServerReconciler) reconcileDeployment(ctx context.Context, zombo
 										Command: []string{"/server/health"},
 									},
 								},
-								InitialDelaySeconds: 0,
-								PeriodSeconds:       2,
-								TimeoutSeconds:      1,
+								InitialDelaySeconds: 20,
+								PeriodSeconds:       5,
+								TimeoutSeconds:      2,
 								SuccessThreshold:    1,
-								FailureThreshold:    60,
+								FailureThreshold:    120, // 5 seconds * 120 attempts = 10 minutes
 							},
 							LivenessProbe: &corev1.Probe{
 								ProbeHandler: corev1.ProbeHandler{
