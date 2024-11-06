@@ -686,6 +686,43 @@ func (r *ZomboidServerReconciler) observeCurrentSettings(ctx context.Context, zo
 	return nil, nil
 }
 
+func mergeWorkshopMods(settings *zomboidv1.ZomboidSettings) {
+	if len(settings.WorkshopMods) == 0 {
+		return
+	}
+
+	var modIDs []string
+	var workshopIDs []string
+
+	// First collect any existing mods from the semicolon-separated lists
+	if settings.Mods.Mods != nil && *settings.Mods.Mods != "" {
+		modIDs = append(modIDs, strings.Split(*settings.Mods.Mods, ";")...)
+	}
+	if settings.Mods.WorkshopItems != nil && *settings.Mods.WorkshopItems != "" {
+		workshopIDs = append(workshopIDs, strings.Split(*settings.Mods.WorkshopItems, ";")...)
+	}
+
+	// Add the structured workshop mods
+	for _, mod := range settings.WorkshopMods {
+		if mod.ModID != nil {
+			modIDs = append(modIDs, *mod.ModID)
+		}
+		if mod.WorkshopID != nil {
+			workshopIDs = append(workshopIDs, *mod.WorkshopID)
+		}
+	}
+
+	// Convert back to semicolon-separated strings if we have any items
+	if len(modIDs) > 0 {
+		modString := strings.Join(modIDs, ";")
+		settings.Mods.Mods = &modString
+	}
+	if len(workshopIDs) > 0 {
+		workshopString := strings.Join(workshopIDs, ";")
+		settings.Mods.WorkshopItems = &workshopString
+	}
+}
+
 func (r *ZomboidServerReconciler) applyDesiredSettings(ctx context.Context, zomboidServer *zomboidv1.ZomboidServer) (*ctrl.Result, error) {
 	if zomboidServer == nil {
 		return nil, nil
@@ -707,6 +744,9 @@ func (r *ZomboidServerReconciler) applyDesiredSettings(ctx context.Context, zomb
 	if specSettings.Identity.ServerPlayerID == nil && statusSettings.Identity.ServerPlayerID != nil {
 		specSettings.Identity.ServerPlayerID = ptr.To(*statusSettings.Identity.ServerPlayerID)
 	}
+
+	// Merge WorkshopMods into Mods before calculating differences
+	mergeWorkshopMods(&specSettings)
 
 	// Calculate differences between current and desired settings
 	updates := settings.SettingsDiff(*statusSettings, specSettings)
@@ -743,6 +783,24 @@ func (r *ZomboidServerReconciler) applyDesiredSettings(ctx context.Context, zomb
 	// If we got here, we have applied one or more settings and gotten confirmed
 	// updated values for those settings, so bump the observed time
 	zomboidServer.Status.SettingsLastObserved = &metav1.Time{Time: time.Now()}
+
+	// Check if any mod-related settings were changed
+	needsRestart := false
+	for _, update := range updates {
+		fieldName := update[0]
+		if fieldName == "Mods" || fieldName == "WorkshopItems" {
+			needsRestart = true
+			break
+		}
+	}
+
+	// If mod settings changed, restart the server using RCON quit command
+	if needsRestart {
+		if err := settings.RestartServer(ctx, hostname, port, password); err != nil {
+			return nil, fmt.Errorf("failed to restart server after mod changes: %w", err)
+		}
+		return &ctrl.Result{RequeueAfter: 30 * time.Second}, nil
+	}
 
 	return nil, nil
 }

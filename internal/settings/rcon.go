@@ -110,3 +110,18 @@ func ApplySettingsUpdates(ctx context.Context, hostname string, port int, passwo
 
 	return nil
 }
+
+// RestartServer sends the quit command to the RCON server to restart it
+func RestartServer(ctx context.Context, hostname string, port int, password string) error {
+	address := fmt.Sprintf("%s:%d", hostname, port)
+
+	conn, err := rcon.Dial(address, password, rcon.SetDialTimeout(5*time.Second), rcon.SetDeadline(5*time.Second))
+	if err != nil {
+		return fmt.Errorf("failed to connect to RCON server: %w", err)
+	}
+	defer conn.Close()
+
+	_, err = conn.Execute("quit")
+
+	return err
+}
