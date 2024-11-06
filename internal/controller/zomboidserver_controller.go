@@ -340,6 +340,8 @@ func (r *ZomboidServerReconciler) reconcileDeployment(ctx context.Context, zombo
 			annotations["secret/server"] = hex.EncodeToString(serverHash[:])
 		}
 
+		image := fmt.Sprintf("hordehost/zomboid-server:%s", zomboidServer.Spec.Version)
+
 		deployment.Spec = appsv1.DeploymentSpec{
 			Replicas: ptr.To(int32(1)),
 			Strategy: appsv1.DeploymentStrategy{
@@ -354,10 +356,32 @@ func (r *ZomboidServerReconciler) reconcileDeployment(ctx context.Context, zombo
 					Annotations: annotations,
 				},
 				Spec: corev1.PodSpec{
+					InitContainers: []corev1.Container{
+						{
+							Name:            "game-data-set-owner",
+							Image:           image,
+							ImagePullPolicy: corev1.PullIfNotPresent,
+							Command:         []string{"/usr/bin/chown", "-R", "1000:1000", "/game-data"},
+							SecurityContext: &corev1.SecurityContext{
+								RunAsUser: ptr.To(int64(0)),
+							},
+							VolumeMounts: []corev1.VolumeMount{{Name: "game-data", MountPath: "/game-data"}},
+						},
+						{
+							Name:            "game-data-set-permissions",
+							Image:           image,
+							ImagePullPolicy: corev1.PullIfNotPresent,
+							Command:         []string{"/usr/bin/chmod", "-R", "755", "/game-data"},
+							SecurityContext: &corev1.SecurityContext{
+								RunAsUser: ptr.To(int64(0)),
+							},
+							VolumeMounts: []corev1.VolumeMount{{Name: "game-data", MountPath: "/game-data"}},
+						},
+					},
 					Containers: []corev1.Container{
 						{
 							Name:            "zomboid",
-							Image:           fmt.Sprintf("hordehost/zomboid-server:%s", zomboidServer.Spec.Version),
+							Image:           image,
 							ImagePullPolicy: corev1.PullIfNotPresent,
 							Resources:       zomboidServer.Spec.Resources,
 							Env:             envVars,

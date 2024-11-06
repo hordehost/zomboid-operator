@@ -241,6 +241,48 @@ var _ = Describe("ZomboidServer Controller", func() {
 					Expect(container.Name).To(Equal("zomboid"))
 				})
 
+				Context("game-data permission init containers", func() {
+					var (
+						setOwner       corev1.Container
+						setPermissions corev1.Container
+					)
+
+					BeforeEach(func() {
+						initContainers := deployment.Spec.Template.Spec.InitContainers
+						Expect(initContainers).To(HaveLen(2))
+
+						setOwner = initContainers[0]
+						Expect(setOwner.Name).To(Equal("game-data-set-owner"))
+
+						setPermissions = initContainers[1]
+						Expect(setPermissions.Name).To(Equal("game-data-set-permissions"))
+					})
+
+					It("should set the correct container names and images", func() {
+						Expect(setOwner.Image).To(Equal("hordehost/zomboid-server:" + zomboidServer.Spec.Version))
+						Expect(setPermissions.Image).To(Equal("hordehost/zomboid-server:" + zomboidServer.Spec.Version))
+					})
+
+					It("should set the correct commands", func() {
+						Expect(setOwner.Command).To(Equal([]string{"/usr/bin/chown", "-R", "1000:1000", "/game-data"}))
+						Expect(setPermissions.Command).To(Equal([]string{"/usr/bin/chmod", "-R", "755", "/game-data"}))
+					})
+
+					It("should run as root user", func() {
+						Expect(setOwner.SecurityContext.RunAsUser).To(Equal(ptr.To(int64(0))))
+						Expect(setPermissions.SecurityContext.RunAsUser).To(Equal(ptr.To(int64(0))))
+					})
+
+					It("should mount the game data volume", func() {
+						expectedMount := corev1.VolumeMount{
+							Name:      "game-data",
+							MountPath: "/game-data",
+						}
+						Expect(setOwner.VolumeMounts).To(ConsistOf(expectedMount))
+						Expect(setPermissions.VolumeMounts).To(ConsistOf(expectedMount))
+					})
+				})
+
 				It("should set the correct container image", func() {
 					Expect(container.Image).To(Equal("hordehost/zomboid-server:" + zomboidServer.Spec.Version))
 				})
