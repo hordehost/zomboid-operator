@@ -31,6 +31,10 @@ type ZomboidServerSpec struct {
 	// Settings contains the server's current settings
 	// +optional
 	Settings ZomboidSettings `json:"settings,omitempty"`
+
+	// Discord contains the Discord configuration
+	// +optional
+	Discord *Discord `json:"discord,omitempty"`
 }
 
 // Storage defines the persistent storage configuration for the Zomboid server.
@@ -55,6 +59,22 @@ type Administrator struct {
 
 	// Password is a reference to a secret key containing the admin password.
 	Password corev1.SecretKeySelector `json:"password"`
+}
+
+// Discord enables and configures integration with Discord,
+// allowing server chat to be bridged with a Discord channel
+type Discord struct {
+	// DiscordToken is a reference to a secret key containing the Discord bot token
+	// +optional
+	DiscordToken *corev1.SecretKeySelector `json:"DiscordToken,omitempty"`
+
+	// DiscordChannel is a reference to a secret key containing the Discord channel name
+	// +optional
+	DiscordChannel *corev1.SecretKeySelector `json:"DiscordChannel,omitempty"`
+
+	// DiscordChannelID is a reference to a secret key containing the Discord channel ID
+	// +optional
+	DiscordChannelID *corev1.SecretKeySelector `json:"DiscordChannelID,omitempty"`
 }
 
 // ZomboidServerStatus defines the observed state of ZomboidServer.

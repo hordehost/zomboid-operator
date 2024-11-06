@@ -78,12 +78,6 @@ func SettingsDiff(current, desired zomboidv1.ZomboidSettings) [][2]string {
 	// Steam settings
 	addIfDifferent("SteamScoreboard", current.Steam.SteamScoreboard, desired.Steam.SteamScoreboard, zomboidv1.DefaultSteam.SteamScoreboard)
 
-	// Discord settings
-	addIfDifferent("DiscordEnable", current.Discord.DiscordEnable, desired.Discord.DiscordEnable, zomboidv1.DefaultDiscord.DiscordEnable)
-	addIfDifferent("DiscordToken", current.Discord.DiscordToken, desired.Discord.DiscordToken, zomboidv1.DefaultDiscord.DiscordToken)
-	addIfDifferent("DiscordChannel", current.Discord.DiscordChannel, desired.Discord.DiscordChannel, zomboidv1.DefaultDiscord.DiscordChannel)
-	addIfDifferent("DiscordChannelID", current.Discord.DiscordChannelID, desired.Discord.DiscordChannelID, zomboidv1.DefaultDiscord.DiscordChannelID)
-
 	// Communication settings
 	addIfDifferent("GlobalChat", current.Communication.GlobalChat, desired.Communication.GlobalChat, zomboidv1.DefaultCommunication.GlobalChat)
 	addIfDifferent("ChatStreams", current.Communication.ChatStreams, desired.Communication.ChatStreams, zomboidv1.DefaultCommunication.ChatStreams)

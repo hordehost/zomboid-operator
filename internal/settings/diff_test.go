@@ -252,32 +252,6 @@ var _ = Describe("Settings Diff", func() {
 		})
 	})
 
-	Context("when comparing Discord settings", func() {
-		It("should detect changes in Discord integration", func() {
-			current.Discord.DiscordEnable = ptr.To(true)
-			current.Discord.DiscordToken = ptr.To("token1")
-			current.Discord.DiscordChannel = ptr.To("channel1")
-			desired.Discord.DiscordEnable = ptr.To(false)
-			desired.Discord.DiscordToken = ptr.To("token2")
-			desired.Discord.DiscordChannel = ptr.To("channel2")
-
-			diff := SettingsDiff(current, desired)
-			Expect(diff).To(ContainElements(
-				[2]string{"DiscordEnable", "false"},
-				[2]string{"DiscordToken", "token2"},
-				[2]string{"DiscordChannel", "channel2"},
-			))
-		})
-
-		It("should handle channel ID changes", func() {
-			current.Discord.DiscordChannelID = ptr.To("123456789")
-			desired.Discord.DiscordChannelID = ptr.To("987654321")
-
-			diff := SettingsDiff(current, desired)
-			Expect(diff).To(ContainElement([2]string{"DiscordChannelID", "987654321"}))
-		})
-	})
-
 	Context("when comparing Gameplay settings", func() {
 		It("should detect changes in display settings", func() {
 			current.Gameplay.DisplayUserName = ptr.To(true)

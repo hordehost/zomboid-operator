@@ -41,10 +41,6 @@ type ZomboidSettings struct {
 	// +optional
 	Steam Steam `json:"steam,omitempty"`
 
-	// Discord contains Discord integration settings
-	// +optional
-	Discord Discord `json:"discord,omitempty"`
-
 	// Communication contains chat and VOIP settings
 	// +optional
 	Communication Communication `json:"communication,omitempty"`
@@ -84,7 +80,6 @@ var DefaultZomboidSettings = ZomboidSettings{
 	Logging:       DefaultLogging,
 	Moderation:    DefaultModeration,
 	Steam:         DefaultSteam,
-	Discord:       DefaultDiscord,
 	Communication: DefaultCommunication,
 	Gameplay:      DefaultGameplay,
 	PVP:           DefaultPVP,
@@ -381,31 +376,6 @@ type Steam struct {
 
 var DefaultSteam = Steam{
 	SteamScoreboard: ptr.To("true"),
-}
-
-// Discord enables and configures integration with Discord,
-// allowing server chat to be bridged with a Discord channel
-type Discord struct {
-	// DiscordEnable enables Discord chat integration
-	// +kubebuilder:default=false
-	// +optional
-	DiscordEnable *bool `json:"DiscordEnable,omitempty"`
-
-	// DiscordToken is the Discord bot token
-	// +optional
-	DiscordToken *string `json:"DiscordToken,omitempty"`
-
-	// DiscordChannel is the Discord channel name. Try channel ID if having difficulties.
-	// +optional
-	DiscordChannel *string `json:"DiscordChannel,omitempty"`
-
-	// DiscordChannelID is the Discord channel ID. Use if having difficulties with channel name.
-	// +optional
-	DiscordChannelID *string `json:"DiscordChannelID,omitempty"`
-}
-
-var DefaultDiscord = Discord{
-	DiscordEnable: ptr.To(false),
 }
 
 // Communication manages all player interaction features including global chat,
