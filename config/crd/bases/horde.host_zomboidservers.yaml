@@ -864,6 +864,14 @@ spec:
                       to use for the PVC, if not set, the default storage class for
                       the cluster will be used.
                     type: string
+                  workshopRequest:
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    description: WorkshopRequest specifies the amount of storage requested
+                      for mods
+                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    x-kubernetes-int-or-string: true
                 required:
                 - request
                 type: object
@@ -959,12 +967,6 @@ spec:
                       AntiCheatProtectionType2:
                         default: true
                         type: boolean
-                      AntiCheatProtectionType2ThresholdMultiplier:
-                        default: 3
-                        description: Protection type threshold multipliers
-                        maximum: 10
-                        minimum: 1
-                        type: number
                       AntiCheatProtectionType3:
                         default: true
                         type: boolean
@@ -1063,6 +1065,12 @@ spec:
                         type: boolean
                       AntiCheatProtectionType24ThresholdMultiplier:
                         default: 6
+                        maximum: 10
+                        minimum: 1
+                        type: number
+                      AntiCheatProtectionType2ThresholdMultiplier:
+                        default: 3
+                        description: Protection type threshold multipliers
                         maximum: 10
                         minimum: 1
                         type: number

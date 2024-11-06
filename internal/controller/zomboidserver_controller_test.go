@@ -241,6 +241,120 @@ var _ = Describe("ZomboidServer Controller", func() {
 					Expect(container.Name).To(Equal("zomboid"))
 				})
 
+				Context("init containers", func() {
+					var initContainers []corev1.Container
+
+					BeforeEach(func() {
+						initContainers = deployment.Spec.Template.Spec.InitContainers
+						Expect(initContainers).To(HaveLen(4))
+					})
+
+					It("should configure game-data init containers correctly", func() {
+						setOwner := initContainers[0]
+						Expect(setOwner.Name).To(Equal("game-data-set-owner"))
+						Expect(setOwner.Image).To(Equal("hordehost/zomboid-server:" + zomboidServer.Spec.Version))
+						Expect(setOwner.Command).To(Equal([]string{"/usr/bin/chown", "-R", "1000:1000", "/game-data"}))
+						Expect(setOwner.SecurityContext.RunAsUser).To(Equal(ptr.To(int64(0))))
+						Expect(setOwner.VolumeMounts).To(ConsistOf(corev1.VolumeMount{
+							Name:      "game-data",
+							MountPath: "/game-data",
+						}))
+
+						setPermissions := initContainers[1]
+						Expect(setPermissions.Name).To(Equal("game-data-set-permissions"))
+						Expect(setPermissions.Image).To(Equal("hordehost/zomboid-server:" + zomboidServer.Spec.Version))
+						Expect(setPermissions.Command).To(Equal([]string{"/usr/bin/chmod", "-R", "755", "/game-data"}))
+						Expect(setPermissions.SecurityContext.RunAsUser).To(Equal(ptr.To(int64(0))))
+						Expect(setPermissions.VolumeMounts).To(ConsistOf(corev1.VolumeMount{
+							Name:      "game-data",
+							MountPath: "/game-data",
+						}))
+					})
+
+					It("should configure workshop init containers correctly", func() {
+						setOwner := initContainers[2]
+						Expect(setOwner.Name).To(Equal("workshop-set-owner"))
+						Expect(setOwner.Image).To(Equal("hordehost/zomboid-server:" + zomboidServer.Spec.Version))
+						Expect(setOwner.Command).To(Equal([]string{"/usr/bin/chown", "-R", "1000:1000", "/server/steamapps"}))
+						Expect(setOwner.SecurityContext.RunAsUser).To(Equal(ptr.To(int64(0))))
+						Expect(setOwner.VolumeMounts).To(ConsistOf(corev1.VolumeMount{
+							Name:      "workshop",
+							MountPath: "/server/steamapps",
+						}))
+
+						setPermissions := initContainers[3]
+						Expect(setPermissions.Name).To(Equal("workshop-set-permissions"))
+						Expect(setPermissions.Image).To(Equal("hordehost/zomboid-server:" + zomboidServer.Spec.Version))
+						Expect(setPermissions.Command).To(Equal([]string{"/usr/bin/chmod", "-R", "755", "/server/steamapps"}))
+						Expect(setPermissions.SecurityContext.RunAsUser).To(Equal(ptr.To(int64(0))))
+						Expect(setPermissions.VolumeMounts).To(ConsistOf(corev1.VolumeMount{
+							Name:      "workshop",
+							MountPath: "/server/steamapps",
+						}))
+					})
+				})
+
+				It("should mount both game-data and workshop volumes", func() {
+					Expect(container.VolumeMounts).To(ConsistOf(
+						corev1.VolumeMount{
+							Name:      "game-data",
+							MountPath: "/game-data",
+						},
+						corev1.VolumeMount{
+							Name:      "workshop",
+							MountPath: "/server/steamapps",
+						},
+					))
+				})
+
+				Context("workshop volume configuration", func() {
+					It("should use emptyDir when WorkshopRequest is not specified", func() {
+						volumes := deployment.Spec.Template.Spec.Volumes
+						workshopVolume := volumes[1]
+						Expect(workshopVolume.Name).To(Equal("workshop"))
+						Expect(workshopVolume.EmptyDir).NotTo(BeNil())
+						Expect(workshopVolume.PersistentVolumeClaim).To(BeNil())
+					})
+
+					When("WorkshopRequest is specified", func() {
+						BeforeEach(func() {
+							zomboidServer.Spec.Storage.WorkshopRequest = ptr.To(resource.MustParse("20Gi"))
+							updateAndReconcile(ctx, k8sClient, reconciler, zomboidServer)
+						})
+
+						It("should create a PVC for workshop data", func() {
+							workshopPVC := &corev1.PersistentVolumeClaim{}
+							Expect(k8sClient.Get(ctx, types.NamespacedName{
+								Name:      zomboidServer.Name + "-workshop",
+								Namespace: zomboidServer.Namespace,
+							}, workshopPVC)).To(Succeed())
+
+							Expect(workshopPVC.Spec.Resources.Requests[corev1.ResourceStorage]).To(Equal(resource.MustParse("20Gi")))
+							Expect(*workshopPVC.Spec.StorageClassName).To(Equal("standard"))
+							Expect(workshopPVC.Spec.AccessModes).To(ConsistOf(corev1.ReadWriteOnce))
+
+							expectedLabels := map[string]string{
+								"app.kubernetes.io/name":       "zomboidserver",
+								"app.kubernetes.io/instance":   zomboidServer.Name,
+								"app.kubernetes.io/managed-by": "zomboid-operator",
+							}
+							Expect(workshopPVC.Labels).To(Equal(expectedLabels))
+						})
+
+						It("should use the workshop PVC in the deployment", func() {
+							deployment := &appsv1.Deployment{}
+							Expect(k8sClient.Get(ctx, zomboidServerName, deployment)).To(Succeed())
+
+							volumes := deployment.Spec.Template.Spec.Volumes
+							workshopVolume := volumes[1]
+							Expect(workshopVolume.Name).To(Equal("workshop"))
+							Expect(workshopVolume.PersistentVolumeClaim).NotTo(BeNil())
+							Expect(workshopVolume.PersistentVolumeClaim.ClaimName).To(Equal(zomboidServer.Name + "-workshop"))
+							Expect(workshopVolume.EmptyDir).To(BeNil())
+						})
+					})
+				})
+
 				It("should set the correct container image", func() {
 					Expect(container.Image).To(Equal("hordehost/zomboid-server:" + zomboidServer.Spec.Version))
 				})
@@ -250,13 +364,6 @@ var _ = Describe("ZomboidServer Controller", func() {
 					Expect(container.Env).To(ContainElement(corev1.EnvVar{
 						Name:  "ZOMBOID_JVM_MAX_HEAP",
 						Value: "2048m",
-					}))
-				})
-
-				It("should mount the game data volume", func() {
-					Expect(container.VolumeMounts).To(ContainElement(corev1.VolumeMount{
-						Name:      "game-data",
-						MountPath: "/game-data",
 					}))
 				})
 

@@ -238,34 +238,79 @@ func (r *ZomboidServerReconciler) reconcileInfrastructure(ctx context.Context, z
 }
 
 func (r *ZomboidServerReconciler) reconcilePVC(ctx context.Context, zomboidServer *zomboidv1.ZomboidServer) error {
-	pvc := &corev1.PersistentVolumeClaim{
+	var err error
+
+	gameDataPVC := &corev1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      zomboidServer.Name + "-game-data",
 			Namespace: zomboidServer.Namespace,
 		},
 	}
 
-	_, err := controllerutil.CreateOrUpdate(ctx, r.Client, pvc, func() error {
-		pvc.Labels = commonLabels(zomboidServer)
-		if pvc.CreationTimestamp.IsZero() {
-			pvc.Spec = corev1.PersistentVolumeClaimSpec{
+	_, err = controllerutil.CreateOrUpdate(ctx, r.Client, gameDataPVC, func() error {
+		gameDataPVC.Labels = commonLabels(zomboidServer)
+
+		storageRequest := zomboidServer.Spec.Storage.Request
+
+		if gameDataPVC.CreationTimestamp.IsZero() {
+			gameDataPVC.Spec = corev1.PersistentVolumeClaimSpec{
 				AccessModes: []corev1.PersistentVolumeAccessMode{
 					corev1.ReadWriteOnce,
 				},
 				StorageClassName: zomboidServer.Spec.Storage.StorageClassName,
 				Resources: corev1.VolumeResourceRequirements{
 					Requests: corev1.ResourceList{
-						corev1.ResourceStorage: zomboidServer.Spec.Storage.Request,
+						corev1.ResourceStorage: storageRequest,
 					},
 				},
 			}
 		} else {
-			pvc.Spec.Resources.Requests[corev1.ResourceStorage] = zomboidServer.Spec.Storage.Request
+			gameDataPVC.Spec.Resources.Requests[corev1.ResourceStorage] = storageRequest
 		}
-		return ctrl.SetControllerReference(zomboidServer, pvc, r.Scheme)
+		return ctrl.SetControllerReference(zomboidServer, gameDataPVC, r.Scheme)
 	})
 
-	return err
+	if err != nil {
+		return err
+	}
+
+	if zomboidServer.Spec.Storage.WorkshopRequest != nil {
+		modsPVC := &corev1.PersistentVolumeClaim{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      zomboidServer.Name + "-workshop",
+				Namespace: zomboidServer.Namespace,
+			},
+		}
+
+		_, err = controllerutil.CreateOrUpdate(ctx, r.Client, modsPVC, func() error {
+			modsPVC.Labels = commonLabels(zomboidServer)
+
+			storageRequest := *zomboidServer.Spec.Storage.WorkshopRequest
+
+			if modsPVC.CreationTimestamp.IsZero() {
+				modsPVC.Spec = corev1.PersistentVolumeClaimSpec{
+					AccessModes: []corev1.PersistentVolumeAccessMode{
+						corev1.ReadWriteOnce,
+					},
+					StorageClassName: zomboidServer.Spec.Storage.StorageClassName,
+					Resources: corev1.VolumeResourceRequirements{
+						Requests: corev1.ResourceList{
+							corev1.ResourceStorage: storageRequest,
+						},
+					},
+				}
+			} else {
+				modsPVC.Spec.Resources.Requests[corev1.ResourceStorage] = storageRequest
+			}
+			return ctrl.SetControllerReference(zomboidServer, modsPVC, r.Scheme)
+		})
+	}
+
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (r *ZomboidServerReconciler) reconcileDeployment(ctx context.Context, zomboidServer *zomboidv1.ZomboidServer) error {
@@ -340,6 +385,21 @@ func (r *ZomboidServerReconciler) reconcileDeployment(ctx context.Context, zombo
 			annotations["secret/server"] = hex.EncodeToString(serverHash[:])
 		}
 
+		image := fmt.Sprintf("hordehost/zomboid-server:%s", zomboidServer.Spec.Version)
+
+		var workshopVolumeSource corev1.VolumeSource
+		if zomboidServer.Spec.Storage.WorkshopRequest != nil {
+			workshopVolumeSource = corev1.VolumeSource{
+				PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
+					ClaimName: zomboidServer.Name + "-workshop",
+				},
+			}
+		} else {
+			workshopVolumeSource = corev1.VolumeSource{
+				EmptyDir: &corev1.EmptyDirVolumeSource{},
+			}
+		}
+
 		deployment.Spec = appsv1.DeploymentSpec{
 			Replicas: ptr.To(int32(1)),
 			Strategy: appsv1.DeploymentStrategy{
@@ -354,10 +414,52 @@ func (r *ZomboidServerReconciler) reconcileDeployment(ctx context.Context, zombo
 					Annotations: annotations,
 				},
 				Spec: corev1.PodSpec{
+					InitContainers: []corev1.Container{
+						{
+							Name:            "game-data-set-owner",
+							Image:           image,
+							ImagePullPolicy: corev1.PullIfNotPresent,
+							Command:         []string{"/usr/bin/chown", "-R", "1000:1000", "/game-data"},
+							SecurityContext: &corev1.SecurityContext{
+								RunAsUser: ptr.To(int64(0)),
+							},
+							VolumeMounts: []corev1.VolumeMount{{Name: "game-data", MountPath: "/game-data"}},
+						},
+						{
+							Name:            "game-data-set-permissions",
+							Image:           image,
+							ImagePullPolicy: corev1.PullIfNotPresent,
+							Command:         []string{"/usr/bin/chmod", "-R", "755", "/game-data"},
+							SecurityContext: &corev1.SecurityContext{
+								RunAsUser: ptr.To(int64(0)),
+							},
+							VolumeMounts: []corev1.VolumeMount{{Name: "game-data", MountPath: "/game-data"}},
+						},
+						{
+							Name:            "workshop-set-owner",
+							Image:           image,
+							ImagePullPolicy: corev1.PullIfNotPresent,
+							Command:         []string{"/usr/bin/chown", "-R", "1000:1000", "/server/steamapps"},
+							SecurityContext: &corev1.SecurityContext{
+								RunAsUser: ptr.To(int64(0)),
+							},
+							VolumeMounts: []corev1.VolumeMount{{Name: "workshop", MountPath: "/server/steamapps"}},
+						},
+						{
+							Name:            "workshop-set-permissions",
+							Image:           image,
+							ImagePullPolicy: corev1.PullIfNotPresent,
+							Command:         []string{"/usr/bin/chmod", "-R", "755", "/server/steamapps"},
+							SecurityContext: &corev1.SecurityContext{
+								RunAsUser: ptr.To(int64(0)),
+							},
+							VolumeMounts: []corev1.VolumeMount{{Name: "workshop", MountPath: "/server/steamapps"}},
+						},
+					},
 					Containers: []corev1.Container{
 						{
 							Name:            "zomboid",
-							Image:           fmt.Sprintf("hordehost/zomboid-server:%s", zomboidServer.Spec.Version),
+							Image:           image,
 							ImagePullPolicy: corev1.PullIfNotPresent,
 							Resources:       zomboidServer.Spec.Resources,
 							Env:             envVars,
@@ -365,6 +467,10 @@ func (r *ZomboidServerReconciler) reconcileDeployment(ctx context.Context, zombo
 								{
 									Name:      "game-data",
 									MountPath: "/game-data",
+								},
+								{
+									Name:      "workshop",
+									MountPath: "/server/steamapps",
 								},
 							},
 							StartupProbe: &corev1.Probe{
@@ -425,6 +531,10 @@ func (r *ZomboidServerReconciler) reconcileDeployment(ctx context.Context, zombo
 									ClaimName: zomboidServer.Name + "-game-data",
 								},
 							},
+						},
+						{
+							Name:         "workshop",
+							VolumeSource: workshopVolumeSource,
 						},
 					},
 				},

@@ -38,6 +38,10 @@ type Storage struct {
 	// Request specifies the amount of storage requested
 	// +kubebuilder:validation:Required
 	Request resource.Quantity `json:"request"`
+
+	// WorkshopRequest specifies the amount of storage requested for mods
+	// +optional
+	WorkshopRequest *resource.Quantity `json:"workshopRequest,omitempty"`
 }
 
 // Administrator defines the credentials for the admin user.
