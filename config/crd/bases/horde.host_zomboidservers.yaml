@@ -875,6 +875,10 @@ spec:
                 required:
                 - request
                 type: object
+              suspended:
+                description: Suspended indicates whether the server should be running.
+                  If true, the server will be stopped.
+                type: boolean
               version:
                 description: Version is the version of the Zomboid server to run.
                 type: string
@@ -967,6 +971,12 @@ spec:
                       AntiCheatProtectionType2:
                         default: true
                         type: boolean
+                      AntiCheatProtectionType2ThresholdMultiplier:
+                        default: 3
+                        description: Protection type threshold multipliers
+                        maximum: 10
+                        minimum: 1
+                        type: number
                       AntiCheatProtectionType3:
                         default: true
                         type: boolean
@@ -1065,12 +1075,6 @@ spec:
                         type: boolean
                       AntiCheatProtectionType24ThresholdMultiplier:
                         default: 6
-                        maximum: 10
-                        minimum: 1
-                        type: number
-                      AntiCheatProtectionType2ThresholdMultiplier:
-                        default: 3
-                        description: Protection type threshold multipliers
                         maximum: 10
                         minimum: 1
                         type: number

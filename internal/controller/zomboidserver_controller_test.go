@@ -504,6 +504,52 @@ var _ = Describe("ZomboidServer Controller", func() {
 					Expect(deployment.Spec.Selector.MatchLabels).To(Equal(expectedLabels))
 					Expect(deployment.Spec.Template.Labels).To(Equal(expectedLabels))
 				})
+
+				It("should set replicas to 1 when not suspended", func() {
+					Expect(*deployment.Spec.Replicas).To(Equal(int32(1)))
+				})
+
+				When("suspended is true", func() {
+					BeforeEach(func() {
+						zomboidServer.Spec.Suspended = ptr.To(true)
+						updateAndReconcile(ctx, k8sClient, reconciler, zomboidServer)
+
+						deployment = &appsv1.Deployment{}
+						Expect(k8sClient.Get(ctx, zomboidServerName, deployment)).To(Succeed())
+					})
+
+					It("should set replicas to 0", func() {
+						Expect(*deployment.Spec.Replicas).To(Equal(int32(0)))
+					})
+				})
+
+				When("suspended is false", func() {
+					BeforeEach(func() {
+						zomboidServer.Spec.Suspended = ptr.To(false)
+						updateAndReconcile(ctx, k8sClient, reconciler, zomboidServer)
+
+						deployment = &appsv1.Deployment{}
+						Expect(k8sClient.Get(ctx, zomboidServerName, deployment)).To(Succeed())
+					})
+
+					It("should set replicas to 1", func() {
+						Expect(*deployment.Spec.Replicas).To(Equal(int32(1)))
+					})
+				})
+
+				When("suspended is nil", func() {
+					BeforeEach(func() {
+						zomboidServer.Spec.Suspended = nil
+						updateAndReconcile(ctx, k8sClient, reconciler, zomboidServer)
+
+						deployment = &appsv1.Deployment{}
+						Expect(k8sClient.Get(ctx, zomboidServerName, deployment)).To(Succeed())
+					})
+
+					It("should set replicas to 1", func() {
+						Expect(*deployment.Spec.Replicas).To(Equal(int32(1)))
+					})
+				})
 			})
 
 			When("creating the Game Service", func() {

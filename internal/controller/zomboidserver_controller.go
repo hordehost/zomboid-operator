@@ -400,8 +400,13 @@ func (r *ZomboidServerReconciler) reconcileDeployment(ctx context.Context, zombo
 			}
 		}
 
+		replicas := int32(1)
+		if zomboidServer.Spec.Suspended != nil && *zomboidServer.Spec.Suspended {
+			replicas = 0
+		}
+
 		deployment.Spec = appsv1.DeploymentSpec{
-			Replicas: ptr.To(int32(1)),
+			Replicas: ptr.To(replicas),
 			Strategy: appsv1.DeploymentStrategy{
 				Type: appsv1.RecreateDeploymentStrategyType,
 			},
