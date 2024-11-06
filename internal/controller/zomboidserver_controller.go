@@ -355,6 +355,34 @@ func (r *ZomboidServerReconciler) reconcileDeployment(ctx context.Context, zombo
 			})
 		}
 
+		// Add Discord environment variables if configured
+		if zomboidServer.Spec.Discord != nil {
+			if zomboidServer.Spec.Discord.DiscordToken != nil {
+				envVars = append(envVars, corev1.EnvVar{
+					Name: "ZOMBOID_DISCORD_TOKEN",
+					ValueFrom: &corev1.EnvVarSource{
+						SecretKeyRef: zomboidServer.Spec.Discord.DiscordToken,
+					},
+				})
+			}
+			if zomboidServer.Spec.Discord.DiscordChannel != nil {
+				envVars = append(envVars, corev1.EnvVar{
+					Name: "ZOMBOID_DISCORD_CHANNEL",
+					ValueFrom: &corev1.EnvVarSource{
+						SecretKeyRef: zomboidServer.Spec.Discord.DiscordChannel,
+					},
+				})
+			}
+			if zomboidServer.Spec.Discord.DiscordChannelID != nil {
+				envVars = append(envVars, corev1.EnvVar{
+					Name: "ZOMBOID_DISCORD_CHANNEL_ID",
+					ValueFrom: &corev1.EnvVarSource{
+						SecretKeyRef: zomboidServer.Spec.Discord.DiscordChannelID,
+					},
+				})
+			}
+		}
+
 		// Get admin password secret
 		adminSecret := &corev1.Secret{}
 		err := r.Get(ctx, client.ObjectKey{

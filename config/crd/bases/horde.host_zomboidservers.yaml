@@ -75,6 +75,85 @@ spec:
                 - password
                 - username
                 type: object
+              discord:
+                description: Discord contains the Discord configuration
+                properties:
+                  DiscordChannel:
+                    description: DiscordChannel is a reference to a secret key containing
+                      the Discord channel name
+                    properties:
+                      key:
+                        description: The key of the secret to select from.  Must be
+                          a valid secret key.
+                        type: string
+                      name:
+                        default: ""
+                        description: |-
+                          Name of the referent.
+                          This field is effectively required, but due to backwards compatibility is
+                          allowed to be empty. Instances of this type with an empty value here are
+                          almost certainly wrong.
+                          More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                        type: string
+                      optional:
+                        description: Specify whether the Secret or its key must be
+                          defined
+                        type: boolean
+                    required:
+                    - key
+                    type: object
+                    x-kubernetes-map-type: atomic
+                  DiscordChannelID:
+                    description: DiscordChannelID is a reference to a secret key containing
+                      the Discord channel ID
+                    properties:
+                      key:
+                        description: The key of the secret to select from.  Must be
+                          a valid secret key.
+                        type: string
+                      name:
+                        default: ""
+                        description: |-
+                          Name of the referent.
+                          This field is effectively required, but due to backwards compatibility is
+                          allowed to be empty. Instances of this type with an empty value here are
+                          almost certainly wrong.
+                          More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                        type: string
+                      optional:
+                        description: Specify whether the Secret or its key must be
+                          defined
+                        type: boolean
+                    required:
+                    - key
+                    type: object
+                    x-kubernetes-map-type: atomic
+                  DiscordToken:
+                    description: DiscordToken is a reference to a secret key containing
+                      the Discord bot token
+                    properties:
+                      key:
+                        description: The key of the secret to select from.  Must be
+                          a valid secret key.
+                        type: string
+                      name:
+                        default: ""
+                        description: |-
+                          Name of the referent.
+                          This field is effectively required, but due to backwards compatibility is
+                          allowed to be empty. Instances of this type with an empty value here are
+                          almost certainly wrong.
+                          More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                        type: string
+                      optional:
+                        description: Specify whether the Secret or its key must be
+                          defined
+                        type: boolean
+                    required:
+                    - key
+                    type: object
+                    x-kubernetes-map-type: atomic
+                type: object
               password:
                 description: Password is required for clients to join.
                 properties:
@@ -369,25 +448,6 @@ spec:
                         maximum: 100000
                         minimum: 0
                         type: number
-                    type: object
-                  discord:
-                    description: Discord contains Discord integration settings
-                    properties:
-                      DiscordChannel:
-                        description: DiscordChannel is the Discord channel name. Try
-                          channel ID if having difficulties.
-                        type: string
-                      DiscordChannelID:
-                        description: DiscordChannelID is the Discord channel ID. Use
-                          if having difficulties with channel name.
-                        type: string
-                      DiscordEnable:
-                        default: false
-                        description: DiscordEnable enables Discord chat integration
-                        type: boolean
-                      DiscordToken:
-                        description: DiscordToken is the Discord bot token
-                        type: string
                     type: object
                   faction:
                     description: Faction contains faction-related settings
@@ -1168,25 +1228,6 @@ spec:
                         maximum: 100000
                         minimum: 0
                         type: number
-                    type: object
-                  discord:
-                    description: Discord contains Discord integration settings
-                    properties:
-                      DiscordChannel:
-                        description: DiscordChannel is the Discord channel name. Try
-                          channel ID if having difficulties.
-                        type: string
-                      DiscordChannelID:
-                        description: DiscordChannelID is the Discord channel ID. Use
-                          if having difficulties with channel name.
-                        type: string
-                      DiscordEnable:
-                        default: false
-                        description: DiscordEnable enables Discord chat integration
-                        type: boolean
-                      DiscordToken:
-                        description: DiscordToken is the Discord bot token
-                        type: string
                     type: object
                   faction:
                     description: Faction contains faction-related settings

@@ -97,16 +97,6 @@ func ParseSettingValue(settings *zomboidv1.ZomboidSettings, key, value string) {
 	case "SteamScoreboard":
 		settings.Steam.SteamScoreboard = ptr.To(value)
 
-	// Discord settings
-	case "DiscordEnable":
-		settings.Discord.DiscordEnable = parseBool(value)
-	case "DiscordToken":
-		settings.Discord.DiscordToken = ptr.To(value)
-	case "DiscordChannel":
-		settings.Discord.DiscordChannel = ptr.To(value)
-	case "DiscordChannelID":
-		settings.Discord.DiscordChannelID = ptr.To(value)
-
 	// Communication settings
 	case "GlobalChat":
 		settings.Communication.GlobalChat = parseBool(value)
