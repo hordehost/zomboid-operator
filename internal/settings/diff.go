@@ -106,6 +106,13 @@ func SettingsDiff(current, desired zomboidv1.ZomboidSettings) [][2]string {
 	addIfDifferent("PlayerRespawnWithSelf", current.Gameplay.PlayerRespawnWithSelf, desired.Gameplay.PlayerRespawnWithSelf, zomboidv1.DefaultGameplay.PlayerRespawnWithSelf)
 	addIfDifferent("PlayerRespawnWithOther", current.Gameplay.PlayerRespawnWithOther, desired.Gameplay.PlayerRespawnWithOther, zomboidv1.DefaultGameplay.PlayerRespawnWithOther)
 	addIfDifferent("FastForwardMultiplier", current.Gameplay.FastForwardMultiplier, desired.Gameplay.FastForwardMultiplier, zomboidv1.DefaultGameplay.FastForwardMultiplier)
+	addIfDifferent("MapRemotePlayerVisibility", current.Gameplay.MapRemotePlayerVisibility, desired.Gameplay.MapRemotePlayerVisibility, zomboidv1.DefaultGameplay.MapRemotePlayerVisibility)
+	addIfDifferent("MouseOverToSeeDisplayName", current.Gameplay.MouseOverToSeeDisplayName, desired.Gameplay.MouseOverToSeeDisplayName, zomboidv1.DefaultGameplay.MouseOverToSeeDisplayName)
+	addIfDifferent("HidePlayersBehindYou", current.Gameplay.HidePlayersBehindYou, desired.Gameplay.HidePlayersBehindYou, zomboidv1.DefaultGameplay.HidePlayersBehindYou)
+	addIfDifferent("CarEngineAttractionModifier", current.Gameplay.CarEngineAttractionModifier, desired.Gameplay.CarEngineAttractionModifier, zomboidv1.DefaultGameplay.CarEngineAttractionModifier)
+	addIfDifferent("PlayerBumpPlayer", current.Gameplay.PlayerBumpPlayer, desired.Gameplay.PlayerBumpPlayer, zomboidv1.DefaultGameplay.PlayerBumpPlayer)
+	addIfDifferent("BloodSplatLifespanDays", current.Gameplay.BloodSplatLifespanDays, desired.Gameplay.BloodSplatLifespanDays, zomboidv1.DefaultGameplay.BloodSplatLifespanDays)
+	addIfDifferent("RemovePlayerCorpsesOnCorpseRemoval", current.Gameplay.RemovePlayerCorpsesOnCorpseRemoval, desired.Gameplay.RemovePlayerCorpsesOnCorpseRemoval, zomboidv1.DefaultGameplay.RemovePlayerCorpsesOnCorpseRemoval)
 
 	// PVP settings
 	addIfDifferent("PVP", current.PVP.PVP, desired.PVP.PVP, zomboidv1.DefaultPVP.PVP)

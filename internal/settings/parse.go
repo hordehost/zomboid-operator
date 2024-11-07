@@ -150,6 +150,20 @@ func ParseSettingValue(settings *zomboidv1.ZomboidSettings, key, value string) {
 		settings.Gameplay.PlayerRespawnWithOther = parseBool(value)
 	case "FastForwardMultiplier":
 		settings.Gameplay.FastForwardMultiplier = parseFloat32(value)
+	case "MapRemotePlayerVisibility":
+		settings.Gameplay.MapRemotePlayerVisibility = parseInt32(value)
+	case "MouseOverToSeeDisplayName":
+		settings.Gameplay.MouseOverToSeeDisplayName = parseBool(value)
+	case "HidePlayersBehindYou":
+		settings.Gameplay.HidePlayersBehindYou = parseBool(value)
+	case "CarEngineAttractionModifier":
+		settings.Gameplay.CarEngineAttractionModifier = parseFloat32(value)
+	case "PlayerBumpPlayer":
+		settings.Gameplay.PlayerBumpPlayer = parseBool(value)
+	case "BloodSplatLifespanDays":
+		settings.Gameplay.BloodSplatLifespanDays = parseInt32(value)
+	case "RemovePlayerCorpsesOnCorpseRemoval":
+		settings.Gameplay.RemovePlayerCorpsesOnCorpseRemoval = parseBool(value)
 
 	// PVP settings
 	case "PVP":

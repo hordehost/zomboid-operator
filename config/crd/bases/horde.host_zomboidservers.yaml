@@ -251,12 +251,6 @@ spec:
                       AntiCheatProtectionType2:
                         default: true
                         type: boolean
-                      AntiCheatProtectionType2ThresholdMultiplier:
-                        default: 3
-                        description: Protection type threshold multipliers
-                        maximum: 10
-                        minimum: 1
-                        type: number
                       AntiCheatProtectionType3:
                         default: true
                         type: boolean
@@ -355,6 +349,12 @@ spec:
                         type: boolean
                       AntiCheatProtectionType24ThresholdMultiplier:
                         default: 6
+                        maximum: 10
+                        minimum: 1
+                        type: number
+                      AntiCheatProtectionType2ThresholdMultiplier:
+                        default: 3
+                        description: Protection type threshold multipliers
                         maximum: 10
                         minimum: 1
                         type: number
@@ -484,6 +484,21 @@ spec:
                         default: false
                         description: AnnounceDeath broadcasts player deaths
                         type: boolean
+                      BloodSplatLifespanDays:
+                        default: 0
+                        description: BloodSplatLifespanDays sets how many days blood
+                          remains visible
+                        format: int32
+                        maximum: 365
+                        minimum: 0
+                        type: integer
+                      CarEngineAttractionModifier:
+                        default: 0.5
+                        description: CarEngineAttractionModifier affects how much
+                          noise cars make to attract zombies
+                        maximum: 10
+                        minimum: 0
+                        type: number
                       DisplayUserName:
                         default: true
                         description: DisplayUserName shows player names
@@ -494,16 +509,32 @@ spec:
                         maximum: 100
                         minimum: 1
                         type: number
+                      HidePlayersBehindYou:
+                        default: false
+                        description: HidePlayersBehindYou prevents seeing players
+                          behind the camera
+                        type: boolean
                       KnockedDownAllowed:
                         default: true
                         description: KnockedDownAllowed enables knock downs
                         type: boolean
+                      MapRemotePlayerVisibility:
+                        default: 1
+                        description: Controls display of remote players on the in-game
+                          map.1=Hidden 2=Friends 3=Everyone
+                        format: int32
+                        type: integer
                       MinutesPerPage:
                         default: 1
                         description: MinutesPerPage is reading time per book page
                         maximum: 60
                         minimum: 0
                         type: number
+                      MouseOverToSeeDisplayName:
+                        default: true
+                        description: MouseOverToSeeDisplayName requires mouse hover
+                          to see player names
+                        type: boolean
                       NoFire:
                         default: false
                         description: NoFire disables all forms of fire except campfires
@@ -511,6 +542,11 @@ spec:
                       PauseEmpty:
                         default: true
                         description: PauseEmpty pauses time when no players online
+                        type: boolean
+                      PlayerBumpPlayer:
+                        default: true
+                        description: PlayerBumpPlayer enables players pushing each
+                          other when walking into them
                         type: boolean
                       PlayerRespawnWithOther:
                         default: false
@@ -521,6 +557,11 @@ spec:
                         default: false
                         description: PlayerRespawnWithSelf enables respawning at death
                           location
+                        type: boolean
+                      RemovePlayerCorpsesOnCorpseRemoval:
+                        default: false
+                        description: RemovePlayerCorpsesOnCorpseRemoval removes player
+                          corpses when other corpses are cleaned up
                         type: boolean
                       ShowFirstAndLastName:
                         default: false
@@ -1264,6 +1305,21 @@ spec:
                         default: false
                         description: AnnounceDeath broadcasts player deaths
                         type: boolean
+                      BloodSplatLifespanDays:
+                        default: 0
+                        description: BloodSplatLifespanDays sets how many days blood
+                          remains visible
+                        format: int32
+                        maximum: 365
+                        minimum: 0
+                        type: integer
+                      CarEngineAttractionModifier:
+                        default: 0.5
+                        description: CarEngineAttractionModifier affects how much
+                          noise cars make to attract zombies
+                        maximum: 10
+                        minimum: 0
+                        type: number
                       DisplayUserName:
                         default: true
                         description: DisplayUserName shows player names
@@ -1274,16 +1330,32 @@ spec:
                         maximum: 100
                         minimum: 1
                         type: number
+                      HidePlayersBehindYou:
+                        default: false
+                        description: HidePlayersBehindYou prevents seeing players
+                          behind the camera
+                        type: boolean
                       KnockedDownAllowed:
                         default: true
                         description: KnockedDownAllowed enables knock downs
                         type: boolean
+                      MapRemotePlayerVisibility:
+                        default: 1
+                        description: Controls display of remote players on the in-game
+                          map.1=Hidden 2=Friends 3=Everyone
+                        format: int32
+                        type: integer
                       MinutesPerPage:
                         default: 1
                         description: MinutesPerPage is reading time per book page
                         maximum: 60
                         minimum: 0
                         type: number
+                      MouseOverToSeeDisplayName:
+                        default: true
+                        description: MouseOverToSeeDisplayName requires mouse hover
+                          to see player names
+                        type: boolean
                       NoFire:
                         default: false
                         description: NoFire disables all forms of fire except campfires
@@ -1291,6 +1363,11 @@ spec:
                       PauseEmpty:
                         default: true
                         description: PauseEmpty pauses time when no players online
+                        type: boolean
+                      PlayerBumpPlayer:
+                        default: true
+                        description: PlayerBumpPlayer enables players pushing each
+                          other when walking into them
                         type: boolean
                       PlayerRespawnWithOther:
                         default: false
@@ -1301,6 +1378,11 @@ spec:
                         default: false
                         description: PlayerRespawnWithSelf enables respawning at death
                           location
+                        type: boolean
+                      RemovePlayerCorpsesOnCorpseRemoval:
+                        default: false
+                        description: RemovePlayerCorpsesOnCorpseRemoval removes player
+                          corpses when other corpses are cleaned up
                         type: boolean
                       ShowFirstAndLastName:
                         default: false
