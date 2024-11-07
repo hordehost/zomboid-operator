@@ -126,6 +126,13 @@ spec:
       PlayerRespawnWithSelf: true
       PlayerRespawnWithOther: true
       FastForwardMultiplier: 30.0
+      MapRemotePlayerVisibility: false
+      MouseOverToSeeDisplayName: false
+      HidePlayersBehindYou: true
+      CarEngineAttractionModifier: 2.0
+      PlayerBumpPlayer: false
+      BloodSplatLifespanDays: 30
+      RemovePlayerCorpsesOnCorpseRemoval: true
     pvp:
       PVP: true
       SafetySystem: true

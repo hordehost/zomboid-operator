@@ -2,6 +2,11 @@ package v1
 
 import "k8s.io/utils/ptr"
 
+// ZomboidSettings contains a Zomboid server's settings, grouped by category
+// into separate structs.  For a full list of settings and their meanings, see:
+//
+//   - https://pzwiki.net/wiki/Server_settings
+//   - https://wiki.indifferentbroccoli.com/ProjectZomboid/AllServerSettings
 type ZomboidSettings struct {
 	// Identity contains settings about how the server is identified and accessed
 	// +optional
@@ -528,26 +533,72 @@ type Gameplay struct {
 	// +kubebuilder:default=40.00
 	// +optional
 	FastForwardMultiplier *float32 `json:"FastForwardMultiplier,omitempty"`
+
+	// Controls display of remote players on the in-game map.1=Hidden 2=Friends 3=Everyone
+	// +kubebuilder:default=1
+	// +optional
+	MapRemotePlayerVisibility *int32 `json:"MapRemotePlayerVisibility,omitempty"`
+
+	// MouseOverToSeeDisplayName requires mouse hover to see player names
+	// +kubebuilder:default=true
+	// +optional
+	MouseOverToSeeDisplayName *bool `json:"MouseOverToSeeDisplayName,omitempty"`
+
+	// HidePlayersBehindYou prevents seeing players behind the camera
+	// +kubebuilder:default=false
+	// +optional
+	HidePlayersBehindYou *bool `json:"HidePlayersBehindYou,omitempty"`
+
+	// CarEngineAttractionModifier affects how much noise cars make to attract zombies
+	// +kubebuilder:validation:Minimum=0.00
+	// +kubebuilder:validation:Maximum=10.00
+	// +kubebuilder:default=0.5
+	// +optional
+	CarEngineAttractionModifier *float32 `json:"CarEngineAttractionModifier,omitempty"`
+
+	// PlayerBumpPlayer enables players pushing each other when walking into them
+	// +kubebuilder:default=true
+	// +optional
+	PlayerBumpPlayer *bool `json:"PlayerBumpPlayer,omitempty"`
+
+	// BloodSplatLifespanDays sets how many days blood remains visible
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=365
+	// +kubebuilder:default=0
+	// +optional
+	BloodSplatLifespanDays *int32 `json:"BloodSplatLifespanDays,omitempty"`
+
+	// RemovePlayerCorpsesOnCorpseRemoval removes player corpses when other corpses are cleaned up
+	// +kubebuilder:default=false
+	// +optional
+	RemovePlayerCorpsesOnCorpseRemoval *bool `json:"RemovePlayerCorpsesOnCorpseRemoval,omitempty"`
 }
 
 var DefaultGameplay = Gameplay{
-	PauseEmpty:                     ptr.To(true),
-	DisplayUserName:                ptr.To(true),
-	ShowFirstAndLastName:           ptr.To(false),
-	SpawnPoint:                     ptr.To("0,0,0"),
-	NoFire:                         ptr.To(false),
-	AnnounceDeath:                  ptr.To(false),
-	MinutesPerPage:                 ptr.To(float32(1.00)),
-	AllowDestructionBySledgehammer: ptr.To(true),
-	SledgehammerOnlyInSafehouse:    ptr.To(false),
-	SleepAllowed:                   ptr.To(false),
-	SleepNeeded:                    ptr.To(false),
-	KnockedDownAllowed:             ptr.To(true),
-	SneakModeHideFromOtherPlayers:  ptr.To(true),
-	SpeedLimit:                     ptr.To(float32(70.00)),
-	PlayerRespawnWithSelf:          ptr.To(false),
-	PlayerRespawnWithOther:         ptr.To(false),
-	FastForwardMultiplier:          ptr.To(float32(40.00)),
+	PauseEmpty:                         ptr.To(true),
+	DisplayUserName:                    ptr.To(true),
+	ShowFirstAndLastName:               ptr.To(false),
+	SpawnPoint:                         ptr.To("0,0,0"),
+	NoFire:                             ptr.To(false),
+	AnnounceDeath:                      ptr.To(false),
+	MinutesPerPage:                     ptr.To(float32(1.00)),
+	AllowDestructionBySledgehammer:     ptr.To(true),
+	SledgehammerOnlyInSafehouse:        ptr.To(false),
+	SleepAllowed:                       ptr.To(false),
+	SleepNeeded:                        ptr.To(false),
+	KnockedDownAllowed:                 ptr.To(true),
+	SneakModeHideFromOtherPlayers:      ptr.To(true),
+	SpeedLimit:                         ptr.To(float32(70.00)),
+	PlayerRespawnWithSelf:              ptr.To(false),
+	PlayerRespawnWithOther:             ptr.To(false),
+	FastForwardMultiplier:              ptr.To(float32(40.00)),
+	MapRemotePlayerVisibility:          ptr.To(int32(1)),
+	MouseOverToSeeDisplayName:          ptr.To(true),
+	HidePlayersBehindYou:               ptr.To(false),
+	CarEngineAttractionModifier:        ptr.To(float32(0.5)),
+	PlayerBumpPlayer:                   ptr.To(false),
+	BloodSplatLifespanDays:             ptr.To(int32(0)),
+	RemovePlayerCorpsesOnCorpseRemoval: ptr.To(false),
 }
 
 // PVP fine-tunes player versus player combat with safety systems,

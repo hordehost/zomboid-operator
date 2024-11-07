@@ -294,6 +294,43 @@ var _ = Describe("Settings Diff", func() {
 				[2]string{"FastForwardMultiplier", "60.0"},
 			))
 		})
+
+		It("should detect changes in player visibility settings", func() {
+			current.Gameplay.MapRemotePlayerVisibility = ptr.To(int32(2))
+			current.Gameplay.MouseOverToSeeDisplayName = ptr.To(true)
+			current.Gameplay.HidePlayersBehindYou = ptr.To(false)
+
+			desired.Gameplay.MapRemotePlayerVisibility = ptr.To(int32(3))
+			desired.Gameplay.MouseOverToSeeDisplayName = ptr.To(false)
+			desired.Gameplay.HidePlayersBehindYou = ptr.To(true)
+
+			diff := SettingsDiff(current, desired)
+			Expect(diff).To(ContainElements(
+				[2]string{"MapRemotePlayerVisibility", "3"},
+				[2]string{"MouseOverToSeeDisplayName", "false"},
+				[2]string{"HidePlayersBehindYou", "true"},
+			))
+		})
+
+		It("should detect changes in additional gameplay settings", func() {
+			current.Gameplay.CarEngineAttractionModifier = ptr.To(float32(1.0))
+			current.Gameplay.PlayerBumpPlayer = ptr.To(true)
+			current.Gameplay.BloodSplatLifespanDays = ptr.To(int32(0))
+			current.Gameplay.RemovePlayerCorpsesOnCorpseRemoval = ptr.To(false)
+
+			desired.Gameplay.CarEngineAttractionModifier = ptr.To(float32(2.0))
+			desired.Gameplay.PlayerBumpPlayer = ptr.To(false)
+			desired.Gameplay.BloodSplatLifespanDays = ptr.To(int32(30))
+			desired.Gameplay.RemovePlayerCorpsesOnCorpseRemoval = ptr.To(true)
+
+			diff := SettingsDiff(current, desired)
+			Expect(diff).To(ContainElements(
+				[2]string{"CarEngineAttractionModifier", "2.0"},
+				[2]string{"PlayerBumpPlayer", "false"},
+				[2]string{"BloodSplatLifespanDays", "30"},
+				[2]string{"RemovePlayerCorpsesOnCorpseRemoval", "true"},
+			))
+		})
 	})
 
 	Context("when comparing Loot settings", func() {
