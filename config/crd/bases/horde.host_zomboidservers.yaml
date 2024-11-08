@@ -75,6 +75,27 @@ spec:
                 - password
                 - username
                 type: object
+              backups:
+                description: Backups defines the persistent storage configuration
+                  for the Zomboid server backups.
+                properties:
+                  request:
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    description: |-
+                      Request specifies the amount of storage requested for backups in-cluster
+                      before they are uploaded to external storage providers
+                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    x-kubernetes-int-or-string: true
+                  storageClassName:
+                    description: |-
+                      StorageClassName is the name of the storage class to use for the backup
+                      PVC. This storage class should support ReadWriteMany access.  If backups
+                      are requested and this is not set, the cluster's default storage class
+                      will be used.
+                    type: string
+                type: object
               discord:
                 description: Discord contains the Discord configuration
                 properties:
@@ -251,12 +272,6 @@ spec:
                       AntiCheatProtectionType2:
                         default: true
                         type: boolean
-                      AntiCheatProtectionType2ThresholdMultiplier:
-                        default: 3
-                        description: Protection type threshold multipliers
-                        maximum: 10
-                        minimum: 1
-                        type: number
                       AntiCheatProtectionType3:
                         default: true
                         type: boolean
@@ -355,6 +370,12 @@ spec:
                         type: boolean
                       AntiCheatProtectionType24ThresholdMultiplier:
                         default: 6
+                        maximum: 10
+                        minimum: 1
+                        type: number
+                      AntiCheatProtectionType2ThresholdMultiplier:
+                        default: 3
+                        description: Protection type threshold multipliers
                         maximum: 10
                         minimum: 1
                         type: number
@@ -953,21 +974,6 @@ spec:
                 description: Storage defines the persistent storage configuration
                   for the Zomboid server.
                 properties:
-                  backupRequest:
-                    anyOf:
-                    - type: integer
-                    - type: string
-                    description: |-
-                      BackupRequest specifies the amount of storage requested for backups
-                      If not set, backups will be stored in the game-data volume
-                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
-                    x-kubernetes-int-or-string: true
-                  backupStorageClassName:
-                    description: |-
-                      BackupStorageClassName is the name of the storage class to use for the backup PVC
-                      This storage class should support ReadWriteMany access mode
-                      If not set but BackupRequest is set, the default storage class will be used
-                    type: string
                   request:
                     anyOf:
                     - type: integer
@@ -976,9 +982,9 @@ spec:
                     pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                     x-kubernetes-int-or-string: true
                   storageClassName:
-                    description: StorageClassName is the name of the storage class
-                      to use for the PVC, if not set, the default storage class for
-                      the cluster will be used.
+                    description: |-
+                      StorageClassName is the name of the storage class to use for the PVC, if
+                      not set, the default storage class for the cluster will be used.
                     type: string
                   workshopRequest:
                     anyOf:
