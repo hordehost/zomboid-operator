@@ -9,6 +9,7 @@ on:
       - ".dockerignore"
       - "go.mod"
       - "go.sum"
+      - ".github/workflows/image.yaml"
   pull_request:
     branches:
       - main
@@ -17,6 +18,7 @@ on:
       - ".dockerignore"
       - "go.mod"
       - "go.sum"
+      - ".github/workflows/image.yaml"
   workflow_call:
     inputs:
       push:
