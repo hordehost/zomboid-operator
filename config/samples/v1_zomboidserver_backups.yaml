@@ -24,8 +24,9 @@ spec:
     storageClassName: "standard"
     request: "2Gi"
     workshopRequest: "1Gi"
-    backupRequest: "2Gi"
-    backupStorageClassName: "standard"
+  backups:
+    storageClassName: "standard"
+    request: "2Gi"
   administrator:
     username: "admin"
     password:

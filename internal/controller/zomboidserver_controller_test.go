@@ -602,8 +602,8 @@ var _ = Describe("ZomboidServer Controller", func() {
 			Context("backup volume configuration", func() {
 				When("BackupRequest is specified", func() {
 					BeforeEach(func() {
-						zomboidServer.Spec.Storage.BackupRequest = ptr.To(resource.MustParse("5Gi"))
-						zomboidServer.Spec.Storage.BackupStorageClassName = ptr.To("rwx-storage")
+						zomboidServer.Spec.Backups.Request = ptr.To(resource.MustParse("5Gi"))
+						zomboidServer.Spec.Backups.StorageClassName = ptr.To("rwx-storage")
 						updateAndReconcile(ctx, k8sClient, reconciler, zomboidServer)
 					})
 
