@@ -251,6 +251,12 @@ spec:
                       AntiCheatProtectionType2:
                         default: true
                         type: boolean
+                      AntiCheatProtectionType2ThresholdMultiplier:
+                        default: 3
+                        description: Protection type threshold multipliers
+                        maximum: 10
+                        minimum: 1
+                        type: number
                       AntiCheatProtectionType3:
                         default: true
                         type: boolean
@@ -349,12 +355,6 @@ spec:
                         type: boolean
                       AntiCheatProtectionType24ThresholdMultiplier:
                         default: 6
-                        maximum: 10
-                        minimum: 1
-                        type: number
-                      AntiCheatProtectionType2ThresholdMultiplier:
-                        default: 3
-                        description: Protection type threshold multipliers
                         maximum: 10
                         minimum: 1
                         type: number
@@ -510,7 +510,7 @@ spec:
                         minimum: 1
                         type: number
                       HidePlayersBehindYou:
-                        default: false
+                        default: true
                         description: HidePlayersBehindYou prevents seeing players
                           behind the camera
                         type: boolean
@@ -544,7 +544,7 @@ spec:
                         description: PauseEmpty pauses time when no players online
                         type: boolean
                       PlayerBumpPlayer:
-                        default: true
+                        default: false
                         description: PlayerBumpPlayer enables players pushing each
                           other when walking into them
                         type: boolean
@@ -953,6 +953,21 @@ spec:
                 description: Storage defines the persistent storage configuration
                   for the Zomboid server.
                 properties:
+                  backupRequest:
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    description: |-
+                      BackupRequest specifies the amount of storage requested for backups
+                      If not set, backups will be stored in the game-data volume
+                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    x-kubernetes-int-or-string: true
+                  backupStorageClassName:
+                    description: |-
+                      BackupStorageClassName is the name of the storage class to use for the backup PVC
+                      This storage class should support ReadWriteMany access mode
+                      If not set but BackupRequest is set, the default storage class will be used
+                    type: string
                   request:
                     anyOf:
                     - type: integer
@@ -1331,7 +1346,7 @@ spec:
                         minimum: 1
                         type: number
                       HidePlayersBehindYou:
-                        default: false
+                        default: true
                         description: HidePlayersBehindYou prevents seeing players
                           behind the camera
                         type: boolean
@@ -1365,7 +1380,7 @@ spec:
                         description: PauseEmpty pauses time when no players online
                         type: boolean
                       PlayerBumpPlayer:
-                        default: true
+                        default: false
                         description: PlayerBumpPlayer enables players pushing each
                           other when walking into them
                         type: boolean

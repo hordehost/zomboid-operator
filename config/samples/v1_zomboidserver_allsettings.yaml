@@ -31,7 +31,8 @@ spec:
       memory: "3Gi"
       cpu: "1"
   storage:
-    request: "10Gi"
+    storageClassName: "standard"
+    request: "2Gi"
   administrator:
     username: "admin"
     password:
