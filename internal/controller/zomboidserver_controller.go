@@ -310,7 +310,7 @@ func (r *ZomboidServerReconciler) reconcilePVC(ctx context.Context, zomboidServe
 		return err
 	}
 
-	if zomboidServer.Spec.Storage.BackupRequest != nil {
+	if zomboidServer.Spec.Backups.Request != nil {
 		backupPVC := &corev1.PersistentVolumeClaim{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      zomboidServer.Name + "-backups",
@@ -321,8 +321,8 @@ func (r *ZomboidServerReconciler) reconcilePVC(ctx context.Context, zomboidServe
 		_, err = controllerutil.CreateOrUpdate(ctx, r.Client, backupPVC, func() error {
 			backupPVC.Labels = commonLabels(zomboidServer)
 
-			storageRequest := *zomboidServer.Spec.Storage.BackupRequest
-			storageClassName := zomboidServer.Spec.Storage.BackupStorageClassName
+			storageRequest := *zomboidServer.Spec.Backups.Request
+			storageClassName := zomboidServer.Spec.Backups.StorageClassName
 			if storageClassName == nil {
 				storageClassName = zomboidServer.Spec.Storage.StorageClassName
 			}
@@ -518,7 +518,7 @@ func (r *ZomboidServerReconciler) reconcileDeployment(ctx context.Context, zombo
 		}
 
 		// Add backup volume init containers if backup storage is requested
-		if zomboidServer.Spec.Storage.BackupRequest != nil {
+		if zomboidServer.Spec.Backups.Request != nil {
 			initContainers = append(initContainers,
 				corev1.Container{
 					Name:            "backup-set-owner",
@@ -572,7 +572,7 @@ func (r *ZomboidServerReconciler) reconcileDeployment(ctx context.Context, zombo
 		}
 
 		// Add backup volume and mount if requested
-		if zomboidServer.Spec.Storage.BackupRequest != nil {
+		if zomboidServer.Spec.Backups.Request != nil {
 			volumes = append(volumes, corev1.Volume{
 				Name: "backups",
 				VolumeSource: corev1.VolumeSource{
