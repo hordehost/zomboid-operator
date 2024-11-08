@@ -1,5 +1,3 @@
-name: Unit tests
-
 on:
   push:
     branches:
@@ -11,7 +9,6 @@ on:
 
 jobs:
   test:
-    name: Unit tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -21,7 +18,4 @@ jobs:
           go-version: "~1.23"
           cache: true
 
-      - name: Run Tests
-        run: |
-          go mod tidy
-          make test
+      - run: make test

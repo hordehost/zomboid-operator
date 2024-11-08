@@ -1,5 +1,3 @@
-name: Release
-
 on:
   release:
     types: [published]
@@ -30,11 +28,9 @@ jobs:
           go-version: "~1.23"
           cache: true
 
-      - name: Generate manifests
-        env:
+      - env:
           IMG: hordehost/zomboid-operator:${{ github.ref_name }}
-        run: |
-          make build-installer
+        run: make build-installer
 
       - uses: actions/upload-release-asset@v1
         env:
