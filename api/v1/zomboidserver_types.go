@@ -50,6 +50,17 @@ type Storage struct {
 	// WorkshopRequest specifies the amount of storage requested for mods
 	// +optional
 	WorkshopRequest *resource.Quantity `json:"workshopRequest,omitempty"`
+
+	// BackupRequest specifies the amount of storage requested for backups
+	// If not set, backups will be stored in the game-data volume
+	// +optional
+	BackupRequest *resource.Quantity `json:"backupRequest,omitempty"`
+
+	// BackupStorageClassName is the name of the storage class to use for the backup PVC
+	// This storage class should support ReadWriteMany access mode
+	// If not set but BackupRequest is set, the default storage class will be used
+	// +optional
+	BackupStorageClassName *string `json:"backupStorageClassName,omitempty"`
 }
 
 // Administrator defines the credentials for the admin user.

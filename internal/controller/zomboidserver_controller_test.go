@@ -598,6 +598,99 @@ var _ = Describe("ZomboidServer Controller", func() {
 					Expect(gameService.Labels).To(Equal(expectedLabels))
 				})
 			})
+
+			Context("backup volume configuration", func() {
+				When("BackupRequest is specified", func() {
+					BeforeEach(func() {
+						zomboidServer.Spec.Storage.BackupRequest = ptr.To(resource.MustParse("5Gi"))
+						zomboidServer.Spec.Storage.BackupStorageClassName = ptr.To("rwx-storage")
+						updateAndReconcile(ctx, k8sClient, reconciler, zomboidServer)
+					})
+
+					It("should create a PVC for backups with RWX access mode", func() {
+						backupPVC := &corev1.PersistentVolumeClaim{}
+						Expect(k8sClient.Get(ctx, types.NamespacedName{
+							Name:      zomboidServer.Name + "-backups",
+							Namespace: zomboidServer.Namespace,
+						}, backupPVC)).To(Succeed())
+
+						Expect(backupPVC.Spec.Resources.Requests[corev1.ResourceStorage]).To(Equal(resource.MustParse("5Gi")))
+						Expect(*backupPVC.Spec.StorageClassName).To(Equal("rwx-storage"))
+						Expect(backupPVC.Spec.AccessModes).To(ConsistOf(corev1.ReadWriteMany))
+
+						expectedLabels := map[string]string{
+							"app.kubernetes.io/name":       "zomboidserver",
+							"app.kubernetes.io/instance":   zomboidServer.Name,
+							"app.kubernetes.io/managed-by": "zomboid-operator",
+						}
+						Expect(backupPVC.Labels).To(Equal(expectedLabels))
+					})
+
+					It("should mount the backup PVC and add init containers", func() {
+						deployment := &appsv1.Deployment{}
+						Expect(k8sClient.Get(ctx, zomboidServerName, deployment)).To(Succeed())
+
+						// Check init containers
+						initContainers := deployment.Spec.Template.Spec.InitContainers
+						Expect(initContainers).To(HaveLen(6)) // Original 4 + 2 new ones
+
+						backupSetOwner := initContainers[4]
+						Expect(backupSetOwner.Name).To(Equal("backup-set-owner"))
+						Expect(backupSetOwner.Image).To(Equal("hordehost/zomboid-server:" + zomboidServer.Spec.Version))
+						Expect(backupSetOwner.Command).To(Equal([]string{"/usr/bin/chown", "-R", "1000:1000", "/game-data/backups"}))
+						Expect(backupSetOwner.SecurityContext.RunAsUser).To(Equal(ptr.To(int64(0))))
+						Expect(backupSetOwner.VolumeMounts).To(ConsistOf(corev1.VolumeMount{
+							Name:      "backups",
+							MountPath: "/game-data/backups",
+						}))
+
+						backupSetPermissions := initContainers[5]
+						Expect(backupSetPermissions.Name).To(Equal("backup-set-permissions"))
+						Expect(backupSetPermissions.Image).To(Equal("hordehost/zomboid-server:" + zomboidServer.Spec.Version))
+						Expect(backupSetPermissions.Command).To(Equal([]string{"/usr/bin/chmod", "-R", "755", "/game-data/backups"}))
+						Expect(backupSetPermissions.SecurityContext.RunAsUser).To(Equal(ptr.To(int64(0))))
+						Expect(backupSetPermissions.VolumeMounts).To(ConsistOf(corev1.VolumeMount{
+							Name:      "backups",
+							MountPath: "/game-data/backups",
+						}))
+
+						// Check container volume mounts
+						container := deployment.Spec.Template.Spec.Containers[0]
+						Expect(container.VolumeMounts).To(ContainElement(corev1.VolumeMount{
+							Name:      "backups",
+							MountPath: "/game-data/backups",
+						}))
+
+						// Check volumes
+						volumes := deployment.Spec.Template.Spec.Volumes
+						backupVolume := volumes[2]
+						Expect(backupVolume.Name).To(Equal("backups"))
+						Expect(backupVolume.PersistentVolumeClaim).NotTo(BeNil())
+						Expect(backupVolume.PersistentVolumeClaim.ClaimName).To(Equal(zomboidServer.Name + "-backups"))
+					})
+				})
+
+				When("BackupRequest is not specified", func() {
+					It("should not create a backup PVC or mount", func() {
+						deployment := &appsv1.Deployment{}
+						Expect(k8sClient.Get(ctx, zomboidServerName, deployment)).To(Succeed())
+
+						// Check that there are only the original init containers
+						Expect(deployment.Spec.Template.Spec.InitContainers).To(HaveLen(4))
+
+						// Check that there is no backup volume mount
+						container := deployment.Spec.Template.Spec.Containers[0]
+						for _, mount := range container.VolumeMounts {
+							Expect(mount.Name).NotTo(Equal("backups"))
+						}
+
+						// Check that there is no backup volume
+						for _, volume := range deployment.Spec.Template.Spec.Volumes {
+							Expect(volume.Name).NotTo(Equal("backups"))
+						}
+					})
+				})
+			})
 		})
 
 		Context("Updating an existing ZomboidServer", func() {

@@ -1,0 +1,36 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: zomboid-passwords
+type: Opaque
+stringData:
+  admin-password: "tread with care"
+  server-password: "let me in"
+---
+apiVersion: horde.host/v1
+kind: ZomboidServer
+metadata:
+  name: zomboidserver-with-backups
+spec:
+  version: "41.78.16-20241106121439"
+  resources:
+    requests:
+      memory: "2Gi"
+      cpu: "500m"
+    limits:
+      memory: "3Gi"
+      cpu: "1"
+  storage:
+    storageClassName: "standard"
+    request: "2Gi"
+    workshopRequest: "1Gi"
+    backupRequest: "2Gi"
+    backupStorageClassName: "standard"
+  administrator:
+    username: "admin"
+    password:
+      name: zomboid-passwords
+      key: admin-password
+  password:
+    name: zomboid-passwords
+    key: server-password

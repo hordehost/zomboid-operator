@@ -545,7 +545,7 @@ type Gameplay struct {
 	MouseOverToSeeDisplayName *bool `json:"MouseOverToSeeDisplayName,omitempty"`
 
 	// HidePlayersBehindYou prevents seeing players behind the camera
-	// +kubebuilder:default=false
+	// +kubebuilder:default=true
 	// +optional
 	HidePlayersBehindYou *bool `json:"HidePlayersBehindYou,omitempty"`
 
@@ -557,7 +557,7 @@ type Gameplay struct {
 	CarEngineAttractionModifier *float32 `json:"CarEngineAttractionModifier,omitempty"`
 
 	// PlayerBumpPlayer enables players pushing each other when walking into them
-	// +kubebuilder:default=true
+	// +kubebuilder:default=false
 	// +optional
 	PlayerBumpPlayer *bool `json:"PlayerBumpPlayer,omitempty"`
 
@@ -594,7 +594,7 @@ var DefaultGameplay = Gameplay{
 	FastForwardMultiplier:              ptr.To(float32(40.00)),
 	MapRemotePlayerVisibility:          ptr.To(int32(1)),
 	MouseOverToSeeDisplayName:          ptr.To(true),
-	HidePlayersBehindYou:               ptr.To(false),
+	HidePlayersBehindYou:               ptr.To(true),
 	CarEngineAttractionModifier:        ptr.To(float32(0.5)),
 	PlayerBumpPlayer:                   ptr.To(false),
 	BloodSplatLifespanDays:             ptr.To(int32(0)),
