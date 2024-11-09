@@ -1,0 +1,23 @@
+# permissions for end users to view zomboidbackupplans.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: zomboid-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: ZomboidBackupPlan-viewer-role
+rules:
+  - apiGroups:
+      - horde.host
+    resources:
+      - zomboidbackupplans
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - horde.host
+    resources:
+      - zomboidbackupplans/status
+    verbs:
+      - get

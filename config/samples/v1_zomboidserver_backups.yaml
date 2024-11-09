@@ -8,6 +8,20 @@ stringData:
   server-password: "let me in"
 ---
 apiVersion: horde.host/v1
+kind: BackupDestination
+metadata:
+  labels:
+    app.kubernetes.io/name: zomboid-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: dropbox-destination
+spec:
+  dropbox:
+    remotePath: "/my/test/path"
+    refreshToken:
+      name: dropbox-token
+      key: refresh-token
+---
+apiVersion: horde.host/v1
 kind: ZomboidServer
 metadata:
   name: zomboidserver-with-backups
@@ -35,3 +49,17 @@ spec:
   password:
     name: zomboid-passwords
     key: server-password
+---
+apiVersion: horde.host/v1
+kind: ZomboidBackupPlan
+metadata:
+  labels:
+    app.kubernetes.io/name: zomboid-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: backup-my-server-to-dropbox
+spec:
+  server:
+    name: zomboidserver-with-backups
+  destination:
+    name: dropbox-destination
+  schedule: "0 0 * * *"

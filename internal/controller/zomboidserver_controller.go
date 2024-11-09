@@ -47,33 +47,36 @@ func (r *ZomboidServerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&corev1.Service{}).
 		Watches(
 			&corev1.Secret{},
-			handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, obj client.Object) []reconcile.Request {
-				secret := obj.(*corev1.Secret)
-
-				zomboidList := &zomboidv1.ZomboidServerList{}
-				if err := r.List(ctx, zomboidList); err != nil {
-					return nil
-				}
-
-				var requests []reconcile.Request
-				for _, zs := range zomboidList.Items {
-					request := reconcile.Request{
-						NamespacedName: types.NamespacedName{
-							Name:      zs.Name,
-							Namespace: zs.Namespace,
-						},
-					}
-
-					if zs.Namespace == secret.Namespace &&
-						(zs.Spec.Administrator.Password.LocalObjectReference.Name == secret.Name ||
-							(zs.Spec.Password != nil && zs.Spec.Password.LocalObjectReference.Name == secret.Name)) {
-						requests = append(requests, request)
-					}
-				}
-				return requests
-			}),
+			handler.EnqueueRequestsFromMapFunc(r.findZomboidServersForSecret),
 		).
 		Complete(r)
+}
+
+// findZomboidServersForSecret returns reconciliation requests for ZomboidServers that reference a Secret
+func (r *ZomboidServerReconciler) findZomboidServersForSecret(ctx context.Context, obj client.Object) []reconcile.Request {
+	secret := obj.(*corev1.Secret)
+
+	zomboidList := &zomboidv1.ZomboidServerList{}
+	if err := r.List(ctx, zomboidList); err != nil {
+		return nil
+	}
+
+	var requests []reconcile.Request
+	for _, zs := range zomboidList.Items {
+		request := reconcile.Request{
+			NamespacedName: types.NamespacedName{
+				Name:      zs.Name,
+				Namespace: zs.Namespace,
+			},
+		}
+
+		if zs.Namespace == secret.Namespace &&
+			(zs.Spec.Administrator.Password.LocalObjectReference.Name == secret.Name ||
+				(zs.Spec.Password != nil && zs.Spec.Password.LocalObjectReference.Name == secret.Name)) {
+			requests = append(requests, request)
+		}
+	}
+	return requests
 }
 
 // +kubebuilder:rbac:groups=horde.host,resources=zomboidservers,verbs=get;list;watch;create;update;patch;delete

@@ -19,6 +19,7 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
+	hordehostv1 "github.com/hordehost/zomboid-operator/api/v1"
 	zomboidhordehostv1 "github.com/hordehost/zomboid-operator/api/v1"
 	zomboidv1 "github.com/hordehost/zomboid-operator/api/v1"
 	"github.com/hordehost/zomboid-operator/internal/controller"
@@ -35,6 +36,7 @@ func init() {
 
 	utilruntime.Must(zomboidhordehostv1.AddToScheme(scheme))
 	utilruntime.Must(zomboidv1.AddToScheme(scheme))
+	utilruntime.Must(hordehostv1.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
 }
 
@@ -136,6 +138,13 @@ func main() {
 		Config: mgr.GetConfig(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ZomboidServer")
+		os.Exit(1)
+	}
+	if err = (&controller.ZomboidBackupPlanReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "ZomboidBackupPlan")
 		os.Exit(1)
 	}
 	// +kubebuilder:scaffold:builder

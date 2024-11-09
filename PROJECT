@@ -4,17 +4,31 @@
 # More info: https://book.kubebuilder.io/reference/project-config.html
 domain: horde.host
 layout:
-- go.kubebuilder.io/v4
+  - go.kubebuilder.io/v4
 projectName: zomboid-operator
 repo: github.com/hordehost/zomboid-operator
 resources:
-- api:
-    crdVersion: v1
-    namespaced: true
-  controller: true
-  domain: horde.host
-  group: zomboid
-  kind: ZomboidServer
-  path: github.com/hordehost/zomboid-operator/api/v1
-  version: v1
+  - api:
+      crdVersion: v1
+      namespaced: true
+    domain: horde.host
+    kind: BackupDestination
+    path: github.com/hordehost/zomboid-operator/api/v1
+    version: v1
+  - api:
+      crdVersion: v1
+      namespaced: true
+    controller: true
+    domain: horde.host
+    kind: ZomboidServer
+    path: github.com/hordehost/zomboid-operator/api/v1
+    version: v1
+  - api:
+      crdVersion: v1
+      namespaced: true
+    controller: true
+    domain: horde.host
+    kind: ZomboidBackupPlan
+    path: github.com/hordehost/zomboid-operator/api/v1
+    version: v1
 version: "3"

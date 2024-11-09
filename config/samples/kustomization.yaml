@@ -2,4 +2,6 @@
 resources:
   - horde.host_v1_zomboidserver.yaml
   - zomboid_v1_zomboidserver.yaml
+- v1_backupdestination.yaml
+- v1_ZomboidBackupPlan.yaml
 # +kubebuilder:scaffold:manifestskustomizesamples

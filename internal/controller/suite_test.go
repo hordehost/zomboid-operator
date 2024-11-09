@@ -17,6 +17,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
+	hordehostv1 "github.com/hordehost/zomboid-operator/api/v1"
 	zomboidv1 "github.com/hordehost/zomboid-operator/api/v1"
 	// +kubebuilder:scaffold:imports
 )
@@ -55,6 +56,9 @@ var _ = BeforeSuite(func() {
 
 	By("adding schemes")
 	err = zomboidv1.AddToScheme(scheme.Scheme)
+	Expect(err).NotTo(HaveOccurred())
+
+	err = hordehostv1.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 
 	// +kubebuilder:scaffold:scheme

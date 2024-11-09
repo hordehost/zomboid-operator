@@ -1,0 +1,10 @@
+When generating any code, never add useless comments that just describe exactly
+what the next line or block is doing.  These are useless and just add noise.  Do
+add comments sparingly when there is something tricky going on and when it would
+otherwise add clarity.  Always generate Golang doc comments to all public types,
+fields, and functions as usual.
+
+When generating Kubernetes controller tests, use explicit `Reconcile` calls
+rather than expecting the controller to be running in the background.  We don't
+run the controller in background for these tests because it is too messy and
+leads to race conditions.
