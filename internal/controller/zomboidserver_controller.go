@@ -387,6 +387,15 @@ func (r *ZomboidServerReconciler) reconcileDeployment(ctx context.Context, zombo
 					SecretKeyRef: &zomboidServer.Spec.Administrator.Password,
 				},
 			},
+			// The General log includes every connection and disconnection to
+			// the RCON server, which creates a lot of ongoing noise that also
+			// includes the admin password.  Unfortunately, we miss some of the
+			// more useful startup logs, but this is better than spamming the
+			// admin password constantly.
+			{
+				Name:  "ZOMBOID_SERVER_DISABLE_LOG",
+				Value: "General",
+			},
 		}
 
 		if zomboidServer.Spec.Password != nil {
