@@ -9,14 +9,16 @@ import (
 type BackupDestinationSpec struct {
 	Dropbox *Dropbox `json:"dropbox,omitempty"`
 
+	GoogleDrive *GoogleDrive `json:"googleDrive,omitempty"`
+
 	S3 *S3 `json:"s3,omitempty"`
 }
 
 // Dropbox defines configuration for Dropbox storage.
 type Dropbox struct {
-	// RefreshToken for Dropbox OAuth.
+	// Token for Dropbox OAuth.
 	// +kubebuilder:validation:Required
-	RefreshToken corev1.SecretKeySelector `json:"refreshToken"`
+	Token corev1.SecretKeySelector `json:"refreshToken"`
 
 	// Path in Dropbox where files will be stored.
 	// +optional
@@ -61,6 +63,26 @@ type S3 struct {
 	// ServerSideEncryption algorithm used when storing objects.
 	// +optional
 	ServerSideEncryption string `json:"serverSideEncryption,omitempty"`
+}
+
+// GoogleDrive defines configuration for Google Drive storage.
+type GoogleDrive struct {
+	// Token for Google Drive OAuth.
+	// +kubebuilder:validation:Required
+	Token corev1.SecretKeySelector `json:"token"`
+
+	// Path in Google Drive where files will be stored.
+	// +optional
+	Path string `json:"path,omitempty"`
+
+	// RootFolderID is the ID of the root folder.
+	// Leave blank normally.
+	// +optional
+	RootFolderID string `json:"rootFolderId,omitempty"`
+
+	// TeamDriveID is the ID of the Shared Drive (Team Drive).
+	// +optional
+	TeamDriveID string `json:"teamDriveId,omitempty"`
 }
 
 // BackupDestinationStatus defines the observed state of BackupDestination.

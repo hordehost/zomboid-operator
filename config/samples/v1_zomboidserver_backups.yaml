@@ -166,3 +166,28 @@ spec:
   destination:
     name: dropbox-destination
   schedule: "0 0 * * *"
+---
+#
+# Google Drive
+#
+apiVersion: horde.host/v1
+kind: BackupDestination
+metadata:
+  name: googledrive-destination
+spec:
+  googleDrive:
+    path: zomboid/backups
+    token:
+      name: googledrive-token
+      key: token
+---
+apiVersion: horde.host/v1
+kind: ZomboidBackupPlan
+metadata:
+  name: backup-my-server-to-googledrive
+spec:
+  server:
+    name: zomboidserver-with-backups
+  destination:
+    name: googledrive-destination
+  schedule: "0 0 * * *"

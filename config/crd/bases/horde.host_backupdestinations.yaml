@@ -46,7 +46,7 @@ spec:
                     description: Path in Dropbox where files will be stored.
                     type: string
                   refreshToken:
-                    description: RefreshToken for Dropbox OAuth.
+                    description: Token for Dropbox OAuth.
                     properties:
                       key:
                         description: The key of the secret to select from.  Must be
@@ -71,6 +71,47 @@ spec:
                     x-kubernetes-map-type: atomic
                 required:
                 - refreshToken
+                type: object
+              googleDrive:
+                description: GoogleDrive defines configuration for Google Drive storage.
+                properties:
+                  path:
+                    description: Path in Google Drive where files will be stored.
+                    type: string
+                  rootFolderId:
+                    description: |-
+                      RootFolderID is the ID of the root folder.
+                      Leave blank normally.
+                    type: string
+                  teamDriveId:
+                    description: TeamDriveID is the ID of the Shared Drive (Team Drive).
+                    type: string
+                  token:
+                    description: Token for Google Drive OAuth.
+                    properties:
+                      key:
+                        description: The key of the secret to select from.  Must be
+                          a valid secret key.
+                        type: string
+                      name:
+                        default: ""
+                        description: |-
+                          Name of the referent.
+                          This field is effectively required, but due to backwards compatibility is
+                          allowed to be empty. Instances of this type with an empty value here are
+                          almost certainly wrong.
+                          More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                        type: string
+                      optional:
+                        description: Specify whether the Secret or its key must be
+                          defined
+                        type: boolean
+                    required:
+                    - key
+                    type: object
+                    x-kubernetes-map-type: atomic
+                required:
+                - token
                 type: object
               s3:
                 description: S3 defines configuration for S3-compatible storage providers.
