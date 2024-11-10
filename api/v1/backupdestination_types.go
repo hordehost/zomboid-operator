@@ -7,67 +7,60 @@ import (
 
 // BackupDestinationSpec defines the desired state of BackupDestination.
 type BackupDestinationSpec struct {
-	S3 *S3 `json:"s3,omitempty"`
-
 	Dropbox *Dropbox `json:"dropbox,omitempty"`
+
+	S3 *S3 `json:"s3,omitempty"`
 }
 
-type S3 struct {
-	// BucketName is the name of the remote bucket that should be used for storing backups
+// Dropbox defines configuration for Dropbox storage.
+type Dropbox struct {
+	// RefreshToken for Dropbox OAuth.
 	// +kubebuilder:validation:Required
-	BucketName string `json:"bucketName"`
+	RefreshToken corev1.SecretKeySelector `json:"refreshToken"`
 
-	// Path is the path within the bucket where backups will be stored. Must not contain a leading slash.
+	// Path in Dropbox where files will be stored.
 	// +optional
 	Path string `json:"path,omitempty"`
+}
 
-	// AccessKeyID is the AWS access key ID for authentication
+// S3 defines configuration for S3-compatible storage providers.
+type S3 struct {
+	// Provider specifies which S3-compatible service to use.
+	// +kubebuilder:validation:Enum=AWS;Alibaba;ArvanCloud;Ceph;ChinaMobile;Cloudflare;DigitalOcean;Dreamhost;HuaweiOBS;IBMCOS;IDrive;IONOS;Liara;Lyve;Minio;Netease;RackCorp;Scaleway;SeaweedFS;StackPath;Storj;TencentCOS;Wasabi;Other
+	Provider string `json:"provider"`
+
+	// Region to connect to.
 	// +optional
-	AccessKeyID *corev1.SecretKeySelector `json:"accessKeyId,omitempty"`
+	Region string `json:"region,omitempty"`
 
-	// SecretAccessKey is the AWS secret access key for authentication
-	// +optional
-	SecretAccessKey *corev1.SecretKeySelector `json:"secretAccessKey,omitempty"`
-
-	// IAMRoleEndpoint is the endpoint for IAM role credentials (e.g. http://169.254.169.254)
-	// +optional
-	IAMRoleEndpoint string `json:"iamRoleEndpoint,omitempty"`
-
-	// Endpoint is the FQDN of the S3 storage server. Defaults to s3.amazonaws.com if not specified.
+	// Endpoint for S3 API.
+	// Leave blank if using AWS to use the default endpoint for the region.
 	// +optional
 	Endpoint string `json:"endpoint,omitempty"`
 
-	// EndpointProtocol is the protocol (http/https) to use. Defaults to https.
-	// +optional
-	EndpointProtocol string `json:"endpointProtocol,omitempty"`
+	// BucketName is the name of the bucket to use.
+	// +kubebuilder:validation:Required
+	BucketName string `json:"bucketName"`
 
-	// EndpointInsecure disables SSL certificate verification when true
+	// Path within the bucket.
 	// +optional
-	EndpointInsecure bool `json:"endpointInsecure,omitempty"`
+	Path string `json:"path,omitempty"`
 
-	// EndpointCACert is a PEM encoded CA certificate for validating self-signed certificates
+	// AccessKeyID for authentication.
 	// +optional
-	EndpointCACert string `json:"endpointCACert,omitempty"`
+	AccessKeyID *corev1.SecretKeySelector `json:"accessKeyId,omitempty"`
 
-	// StorageClass changes the S3 storage class header. Defaults to STANDARD.
+	// SecretAccessKey for authentication.
+	// +optional
+	SecretAccessKey *corev1.SecretKeySelector `json:"secretAccessKey,omitempty"`
+
+	// StorageClass to use when storing objects.
 	// +optional
 	StorageClass string `json:"storageClass,omitempty"`
 
-	// PartSize changes the S3 multipart upload part size in MB. Defaults to 16.
+	// ServerSideEncryption algorithm used when storing objects.
 	// +optional
-	// +kubebuilder:validation:Minimum=1
-	PartSize *int32 `json:"partSize,omitempty"`
-}
-
-// Dropbox contains configuration for backing up to Dropbox
-type Dropbox struct {
-	// RefreshToken is the OAuth refresh token for Dropbox access
-	RefreshToken corev1.SecretKeySelector `json:"refreshToken"`
-
-	// RemotePath is the path in Dropbox where backups will be stored
-	// If not specified, defaults to /<namespace>/zomboid/<server-name>
-	// +optional
-	RemotePath string `json:"remotePath,omitempty"`
+	ServerSideEncryption string `json:"serverSideEncryption,omitempty"`
 }
 
 // BackupDestinationStatus defines the observed state of BackupDestination.
