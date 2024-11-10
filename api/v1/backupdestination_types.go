@@ -7,7 +7,56 @@ import (
 
 // BackupDestinationSpec defines the desired state of BackupDestination.
 type BackupDestinationSpec struct {
+	S3 *S3 `json:"s3,omitempty"`
+
 	Dropbox *Dropbox `json:"dropbox,omitempty"`
+}
+
+type S3 struct {
+	// BucketName is the name of the remote bucket that should be used for storing backups
+	// +kubebuilder:validation:Required
+	BucketName string `json:"bucketName"`
+
+	// Path is the path within the bucket where backups will be stored. Must not contain a leading slash.
+	// +optional
+	Path string `json:"path,omitempty"`
+
+	// AccessKeyID is the AWS access key ID for authentication
+	// +optional
+	AccessKeyID *corev1.SecretKeySelector `json:"accessKeyId,omitempty"`
+
+	// SecretAccessKey is the AWS secret access key for authentication
+	// +optional
+	SecretAccessKey *corev1.SecretKeySelector `json:"secretAccessKey,omitempty"`
+
+	// IAMRoleEndpoint is the endpoint for IAM role credentials (e.g. http://169.254.169.254)
+	// +optional
+	IAMRoleEndpoint string `json:"iamRoleEndpoint,omitempty"`
+
+	// Endpoint is the FQDN of the S3 storage server. Defaults to s3.amazonaws.com if not specified.
+	// +optional
+	Endpoint string `json:"endpoint,omitempty"`
+
+	// EndpointProtocol is the protocol (http/https) to use. Defaults to https.
+	// +optional
+	EndpointProtocol string `json:"endpointProtocol,omitempty"`
+
+	// EndpointInsecure disables SSL certificate verification when true
+	// +optional
+	EndpointInsecure bool `json:"endpointInsecure,omitempty"`
+
+	// EndpointCACert is a PEM encoded CA certificate for validating self-signed certificates
+	// +optional
+	EndpointCACert string `json:"endpointCACert,omitempty"`
+
+	// StorageClass changes the S3 storage class header. Defaults to STANDARD.
+	// +optional
+	StorageClass string `json:"storageClass,omitempty"`
+
+	// PartSize changes the S3 multipart upload part size in MB. Defaults to 16.
+	// +optional
+	// +kubebuilder:validation:Minimum=1
+	PartSize *int32 `json:"partSize,omitempty"`
 }
 
 // Dropbox contains configuration for backing up to Dropbox

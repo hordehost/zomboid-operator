@@ -152,8 +152,12 @@ func (r *ZomboidBackupPlanReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		return ctrl.Result{}, fmt.Errorf("failed to set owner references: %w", err)
 	}
 
-	if err := r.reconcileDropbox(ctx, backupPlan, server, destination); err != nil {
-		return ctrl.Result{}, fmt.Errorf("failed to reconcile Dropbox: %w", err)
+	if err := r.reconcileApplicationSecret(ctx, backupPlan, server, destination); err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to reconcile application secret: %w", err)
+	}
+
+	if err := r.reconcileCronJob(ctx, backupPlan, server, destination); err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to reconcile CronJob: %w", err)
 	}
 
 	return ctrl.Result{}, nil
@@ -190,68 +194,98 @@ func (r *ZomboidBackupPlanReconciler) setOwnerReferences(ctx context.Context, ba
 	return nil
 }
 
-func (r *ZomboidBackupPlanReconciler) reconcileDropbox(ctx context.Context, backupPlan *hordehostv1.ZomboidBackupPlan, server *hordehostv1.ZomboidServer, destination *hordehostv1.BackupDestination) error {
-	if err := r.reconcileDropboxApplicationSecret(ctx, backupPlan, server, destination); err != nil {
-		return fmt.Errorf("failed to reconcile Dropbox application secret: %w", err)
+func (r *ZomboidBackupPlanReconciler) reconcileApplicationSecret(ctx context.Context, backupPlan *hordehostv1.ZomboidBackupPlan, server *hordehostv1.ZomboidServer, destination *hordehostv1.BackupDestination) error {
+	type applicationSecret struct {
+		sourceName      string
+		sourceNamespace string
+		targetName      string
+		keys            []string
 	}
 
-	if err := r.reconcileDropboxCronJob(ctx, backupPlan, server, destination); err != nil {
-		return fmt.Errorf("failed to reconcile Dropbox CronJob: %w", err)
+	possibleSecrets := map[string]*applicationSecret{
+		"dropbox": {
+			sourceName:      "dropbox-application",
+			sourceNamespace: "zomboid-system",
+			targetName:      fmt.Sprintf("%s-dropbox-application", backupPlan.Name),
+			keys:            []string{"app-key", "app-secret"},
+		},
 	}
 
-	return nil
-}
-
-func (r *ZomboidBackupPlanReconciler) reconcileDropboxApplicationSecret(ctx context.Context, backupPlan *hordehostv1.ZomboidBackupPlan, server *hordehostv1.ZomboidServer, destination *hordehostv1.BackupDestination) error {
-	var err error
-
-	shouldExist := server != nil && destination != nil && destination.Spec.Dropbox != nil
-
-	targetSecret := &corev1.Secret{}
-	err = r.Get(ctx, types.NamespacedName{
-		Name:      fmt.Sprintf("%s-dropbox-application", backupPlan.Name),
-		Namespace: backupPlan.Namespace,
-	}, targetSecret)
-	if err == nil && !shouldExist {
-		return r.Delete(ctx, targetSecret)
-	} else if err != nil && !errors.IsNotFound(err) {
-		return fmt.Errorf("failed to get Secret: %w", err)
+	var desiredSecret *applicationSecret
+	if server != nil && destination != nil {
+		switch {
+		case destination.Spec.Dropbox != nil:
+			desiredSecret = possibleSecrets["dropbox"]
+		}
 	}
 
-	if !shouldExist {
+	// Delete any existing secrets that shouldn't exist
+	for _, possibleSecret := range possibleSecrets {
+		if desiredSecret != nil && possibleSecret.targetName == desiredSecret.targetName {
+			continue
+		}
+
+		secret := &corev1.Secret{}
+		err := r.Get(ctx, types.NamespacedName{
+			Name:      possibleSecret.targetName,
+			Namespace: backupPlan.Namespace,
+		}, secret)
+		if err == nil {
+			if err := r.Delete(ctx, secret); err != nil {
+				return fmt.Errorf("failed to delete secret %s: %w", possibleSecret.targetName, err)
+			}
+		} else if !errors.IsNotFound(err) {
+			return fmt.Errorf("failed to get secret %s: %w", possibleSecret.targetName, err)
+		}
+	}
+
+	// If no secret should exist, we're done
+	if desiredSecret == nil {
 		return nil
 	}
 
+	// Create/update the desired secret
 	sourceSecret := &corev1.Secret{}
 	if err := r.Get(ctx, types.NamespacedName{
-		Name:      "dropbox-application",
-		Namespace: "zomboid-system",
+		Name:      desiredSecret.sourceName,
+		Namespace: desiredSecret.sourceNamespace,
 	}, sourceSecret); err != nil {
-		return fmt.Errorf("failed to get source Dropbox credentials: %w", err)
+		return fmt.Errorf("failed to get source credentials: %w", err)
 	}
 
-	targetSecret = &corev1.Secret{
+	targetSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("%s-dropbox-application", backupPlan.Name),
+			Name:      desiredSecret.targetName,
 			Namespace: backupPlan.Namespace,
 		},
 	}
 
-	_, err = controllerutil.CreateOrUpdate(ctx, r.Client, targetSecret, func() error {
+	_, err := controllerutil.CreateOrUpdate(ctx, r.Client, targetSecret, func() error {
 		targetSecret.Data = make(map[string][]byte)
-		targetSecret.Data["app-key"] = sourceSecret.Data["app-key"]
-		targetSecret.Data["app-secret"] = sourceSecret.Data["app-secret"]
-
+		for _, key := range desiredSecret.keys {
+			targetSecret.Data[key] = sourceSecret.Data[key]
+		}
 		return controllerutil.SetOwnerReference(backupPlan, targetSecret, r.Scheme)
 	})
 
 	return err
 }
 
-func (r *ZomboidBackupPlanReconciler) reconcileDropboxCronJob(ctx context.Context, backupPlan *hordehostv1.ZomboidBackupPlan, server *hordehostv1.ZomboidServer, destination *hordehostv1.BackupDestination) error {
+func (r *ZomboidBackupPlanReconciler) reconcileCronJob(ctx context.Context, backupPlan *hordehostv1.ZomboidBackupPlan, server *hordehostv1.ZomboidServer, destination *hordehostv1.BackupDestination) error {
 	var err error
 
-	shouldExist := server != nil && destination != nil && destination.Spec.Dropbox != nil
+	var container *corev1.Container
+	if destination != nil {
+		switch {
+		case destination.Spec.Dropbox != nil:
+			container = r.dropboxContainer(*destination.Spec.Dropbox, backupPlan)
+		case destination.Spec.S3 != nil:
+			container = r.s3Container(*destination.Spec.S3)
+		}
+	}
+
+	// If no provider is active or server is missing, we shouldn't have a CronJob
+	shouldExist := server != nil && container != nil
 
 	cronJob := &batchv1.CronJob{}
 	err = r.Get(ctx, types.NamespacedName{
@@ -281,11 +315,6 @@ func (r *ZomboidBackupPlanReconciler) reconcileDropboxCronJob(ctx context.Contex
 			return err
 		}
 
-		remotePath := fmt.Sprintf("/%s/zomboid/%s", backupPlan.Namespace, backupPlan.Spec.Server.Name)
-		if destination.Spec.Dropbox != nil && destination.Spec.Dropbox.RemotePath != "" {
-			remotePath = destination.Spec.Dropbox.RemotePath
-		}
-
 		cronJob.Spec = batchv1.CronJobSpec{
 			Schedule: backupPlan.Spec.Schedule,
 			JobTemplate: batchv1.JobTemplateSpec{
@@ -293,58 +322,7 @@ func (r *ZomboidBackupPlanReconciler) reconcileDropboxCronJob(ctx context.Contex
 					Template: corev1.PodTemplateSpec{
 						Spec: corev1.PodSpec{
 							RestartPolicy: corev1.RestartPolicyNever,
-							Containers: []corev1.Container{
-								{
-									Name:  "backup",
-									Image: "offen/docker-volume-backup:v2.43.0",
-									Env: []corev1.EnvVar{
-										{
-											Name:  "DROPBOX_REMOTE_PATH",
-											Value: remotePath,
-										},
-										{
-											Name: "DROPBOX_APP_KEY",
-											ValueFrom: &corev1.EnvVarSource{
-												SecretKeyRef: &corev1.SecretKeySelector{
-													LocalObjectReference: corev1.LocalObjectReference{
-														Name: fmt.Sprintf("%s-dropbox-application", backupPlan.Name),
-													},
-													Key: "app-key",
-												},
-											},
-										},
-										{
-											Name: "DROPBOX_APP_SECRET",
-											ValueFrom: &corev1.EnvVarSource{
-												SecretKeyRef: &corev1.SecretKeySelector{
-													LocalObjectReference: corev1.LocalObjectReference{
-														Name: fmt.Sprintf("%s-dropbox-application", backupPlan.Name),
-													},
-													Key: "app-secret",
-												},
-											},
-										},
-										{
-											Name: "DROPBOX_REFRESH_TOKEN",
-											ValueFrom: &corev1.EnvVarSource{
-												SecretKeyRef: &corev1.SecretKeySelector{
-													LocalObjectReference: corev1.LocalObjectReference{
-														Name: destination.Spec.Dropbox.RefreshToken.Name,
-													},
-													Key: destination.Spec.Dropbox.RefreshToken.Key,
-												},
-											},
-										},
-									},
-									Command: []string{"/usr/bin/backup"},
-									VolumeMounts: []corev1.VolumeMount{
-										{
-											Name:      "backup-data",
-											MountPath: "/backup",
-										},
-									},
-								},
-							},
+							Containers:    []corev1.Container{*container},
 							Volumes: []corev1.Volume{
 								{
 									Name: "backup-data",
@@ -364,4 +342,161 @@ func (r *ZomboidBackupPlanReconciler) reconcileDropboxCronJob(ctx context.Contex
 	})
 
 	return err
+}
+
+func (r *ZomboidBackupPlanReconciler) dropboxContainer(dropbox hordehostv1.Dropbox, backupPlan *hordehostv1.ZomboidBackupPlan) *corev1.Container {
+	remotePath := fmt.Sprintf("/%s/zomboid/%s", backupPlan.Namespace, backupPlan.Spec.Server.Name)
+	if dropbox.RemotePath != "" {
+		remotePath = dropbox.RemotePath
+	}
+
+	env := []corev1.EnvVar{
+		{
+			Name:  "DROPBOX_REMOTE_PATH",
+			Value: remotePath,
+		},
+		{
+			Name: "DROPBOX_APP_KEY",
+			ValueFrom: &corev1.EnvVarSource{
+				SecretKeyRef: &corev1.SecretKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: fmt.Sprintf("%s-dropbox-application", backupPlan.Name),
+					},
+					Key: "app-key",
+				},
+			},
+		},
+		{
+			Name: "DROPBOX_APP_SECRET",
+			ValueFrom: &corev1.EnvVarSource{
+				SecretKeyRef: &corev1.SecretKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: fmt.Sprintf("%s-dropbox-application", backupPlan.Name),
+					},
+					Key: "app-secret",
+				},
+			},
+		},
+		{
+			Name: "DROPBOX_REFRESH_TOKEN",
+			ValueFrom: &corev1.EnvVarSource{
+				SecretKeyRef: &corev1.SecretKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: dropbox.RefreshToken.Name,
+					},
+					Key: dropbox.RefreshToken.Key,
+				},
+			},
+		},
+	}
+
+	return &corev1.Container{
+		Name:    "backup",
+		Image:   "offen/docker-volume-backup:v2.43.0",
+		Command: []string{"/usr/bin/backup"},
+		Env:     env,
+		VolumeMounts: []corev1.VolumeMount{
+			{
+				Name:      "backup-data",
+				MountPath: "/backup",
+			},
+		},
+	}
+}
+
+func (r *ZomboidBackupPlanReconciler) s3Container(s3 hordehostv1.S3) *corev1.Container {
+	env := []corev1.EnvVar{
+		{
+			Name:  "AWS_S3_BUCKET_NAME",
+			Value: s3.BucketName,
+		},
+	}
+
+	if s3.Path != "" {
+		env = append(env, corev1.EnvVar{
+			Name:  "AWS_S3_PATH",
+			Value: s3.Path,
+		})
+	}
+
+	if s3.AccessKeyID != nil {
+		env = append(env, corev1.EnvVar{
+			Name: "AWS_ACCESS_KEY_ID",
+			ValueFrom: &corev1.EnvVarSource{
+				SecretKeyRef: s3.AccessKeyID,
+			},
+		})
+	}
+
+	if s3.SecretAccessKey != nil {
+		env = append(env, corev1.EnvVar{
+			Name: "AWS_SECRET_ACCESS_KEY",
+			ValueFrom: &corev1.EnvVarSource{
+				SecretKeyRef: s3.SecretAccessKey,
+			},
+		})
+	}
+
+	if s3.IAMRoleEndpoint != "" {
+		env = append(env, corev1.EnvVar{
+			Name:  "AWS_IAM_ROLE_ENDPOINT",
+			Value: s3.IAMRoleEndpoint,
+		})
+	}
+
+	if s3.Endpoint != "" {
+		env = append(env, corev1.EnvVar{
+			Name:  "AWS_ENDPOINT",
+			Value: s3.Endpoint,
+		})
+	}
+
+	if s3.EndpointProtocol != "" {
+		env = append(env, corev1.EnvVar{
+			Name:  "AWS_ENDPOINT_PROTO",
+			Value: s3.EndpointProtocol,
+		})
+
+		// Only set AWS_ENDPOINT_INSECURE when using HTTPS protocol
+		if s3.EndpointProtocol == "https" && s3.EndpointInsecure {
+			env = append(env, corev1.EnvVar{
+				Name:  "AWS_ENDPOINT_INSECURE",
+				Value: "true",
+			})
+		}
+	}
+
+	if s3.EndpointCACert != "" {
+		env = append(env, corev1.EnvVar{
+			Name:  "AWS_ENDPOINT_CA_CERT",
+			Value: s3.EndpointCACert,
+		})
+	}
+
+	if s3.StorageClass != "" {
+		env = append(env, corev1.EnvVar{
+			Name:  "AWS_STORAGE_CLASS",
+			Value: s3.StorageClass,
+		})
+	}
+
+	if s3.PartSize != nil {
+		env = append(env, corev1.EnvVar{
+			Name:  "AWS_PART_SIZE",
+			Value: fmt.Sprintf("%d", *s3.PartSize),
+		})
+	}
+
+	return &corev1.Container{
+		Name:    "backup",
+		Image:   "offen/docker-volume-backup:v2.43.0",
+		Command: []string{"/usr/bin/backup"},
+		Env:     env,
+		VolumeMounts: []corev1.VolumeMount{
+			{
+				Name:      "backup-data",
+				MountPath: "/backup",
+			},
+		},
+	}
 }
