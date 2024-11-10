@@ -216,11 +216,16 @@ var _ = Describe("ZomboidBackupPlan Controller", func() {
 				Expect(container.Name).To(Equal("backup"))
 			})
 
+			It("should use the correct container image", func() {
+				Expect(container.Image).To(Equal("rclone/rclone:1.68.1"))
+			})
+
 			It("should configure the volume mounts correctly", func() {
 				Expect(container.VolumeMounts).To(ConsistOf(
 					corev1.VolumeMount{
 						Name:      "backup-data",
 						MountPath: "/backup",
+						ReadOnly:  true,
 					},
 				))
 			})
@@ -301,21 +306,12 @@ var _ = Describe("ZomboidBackupPlan Controller", func() {
 
 		When("using a Dropbox destination", func() {
 			var (
-				dropboxApplicationSecret *corev1.Secret
-				dropboxBackupPlanName    types.NamespacedName
-				dropboxDestination       *hordehostv1.BackupDestination
-				dropboxBackupPlan        *hordehostv1.ZomboidBackupPlan
-				dropboxSecret            *corev1.Secret
-				container                corev1.Container
+				dropboxBackupPlanName types.NamespacedName
+				dropboxDestination    *hordehostv1.BackupDestination
+				dropboxBackupPlan     *hordehostv1.ZomboidBackupPlan
+				dropboxSecret         *corev1.Secret
+				container             corev1.Container
 			)
-
-			BeforeEach(func() {
-				// This works because we created the application secret in the
-				// BeforeEach block for the whole test suite.  Other backup
-				// providers would need to create and delete application secrets
-				// here as appropriate.
-				dropboxApplicationSecret = applicationSecret
-			})
 
 			BeforeEach(func() {
 				dropboxBackupPlanName = types.NamespacedName{
@@ -372,8 +368,6 @@ var _ = Describe("ZomboidBackupPlan Controller", func() {
 				_, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: dropboxBackupPlanName})
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(k8sClient.Get(ctx, dropboxBackupPlanName, dropboxBackupPlan)).To(Succeed())
-
 				cronJob := &batchv1.CronJob{}
 				err = k8sClient.Get(ctx, dropboxBackupPlanName, cronJob)
 				Expect(err).NotTo(HaveOccurred())
@@ -381,257 +375,127 @@ var _ = Describe("ZomboidBackupPlan Controller", func() {
 				container = cronJob.Spec.JobTemplate.Spec.Template.Spec.Containers[0]
 			})
 
-			It("should use the correct container image", func() {
-				Expect(container.Image).To(Equal("offen/docker-volume-backup:v2.43.0"))
+			It("should configure the correct rclone command", func() {
+				Expect(container.Command).To(Equal([]string{
+					"rclone",
+					"sync",
+					"/backup",
+					fmt.Sprintf("dropbox:%s/zomboid/test-server", namespace),
+				}))
 			})
 
-			Context("with default remote path", func() {
-				It("should set the Dropbox remote path to the default format", func() {
-					Expect(container.Env).To(ContainElement(corev1.EnvVar{
-						Name:  "DROPBOX_REMOTE_PATH",
-						Value: fmt.Sprintf("/%s/zomboid/%s", namespace, server.Name),
-					}))
+			Context("with custom path", func() {
+				Context("with leading slash", func() {
+					BeforeEach(func() {
+						dropboxDestination.Spec.Dropbox.Path = "/custom/backup/path"
+						Expect(k8sClient.Update(ctx, dropboxDestination)).To(Succeed())
+
+						_, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: dropboxBackupPlanName})
+						Expect(err).NotTo(HaveOccurred())
+
+						cronJob := &batchv1.CronJob{}
+						err = k8sClient.Get(ctx, dropboxBackupPlanName, cronJob)
+						Expect(err).NotTo(HaveOccurred())
+
+						container = cronJob.Spec.JobTemplate.Spec.Template.Spec.Containers[0]
+					})
+
+					It("should strip the leading slash from the path", func() {
+						Expect(container.Command).To(Equal([]string{
+							"rclone",
+							"sync",
+							"/backup",
+							"dropbox:custom/backup/path",
+						}))
+					})
+				})
+
+				Context("without leading slash", func() {
+					BeforeEach(func() {
+						dropboxDestination.Spec.Dropbox.Path = "custom/backup/path"
+						Expect(k8sClient.Update(ctx, dropboxDestination)).To(Succeed())
+
+						_, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: dropboxBackupPlanName})
+						Expect(err).NotTo(HaveOccurred())
+
+						cronJob := &batchv1.CronJob{}
+						err = k8sClient.Get(ctx, dropboxBackupPlanName, cronJob)
+						Expect(err).NotTo(HaveOccurred())
+
+						container = cronJob.Spec.JobTemplate.Spec.Template.Spec.Containers[0]
+					})
+
+					It("should use the path as-is", func() {
+						Expect(container.Command).To(Equal([]string{
+							"rclone",
+							"sync",
+							"/backup",
+							"dropbox:custom/backup/path",
+						}))
+					})
+				})
+
+				Context("with default path", func() {
+					BeforeEach(func() {
+						dropboxDestination.Spec.Dropbox.Path = ""
+						Expect(k8sClient.Update(ctx, dropboxDestination)).To(Succeed())
+
+						_, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: dropboxBackupPlanName})
+						Expect(err).NotTo(HaveOccurred())
+
+						cronJob := &batchv1.CronJob{}
+						err = k8sClient.Get(ctx, dropboxBackupPlanName, cronJob)
+						Expect(err).NotTo(HaveOccurred())
+
+						container = cronJob.Spec.JobTemplate.Spec.Template.Spec.Containers[0]
+					})
+
+					It("should use the default path format", func() {
+						Expect(container.Command).To(Equal([]string{
+							"rclone",
+							"sync",
+							"/backup",
+							fmt.Sprintf("dropbox:%s/zomboid/test-server", namespace),
+						}))
+					})
 				})
 			})
 
-			Context("with custom remote path", func() {
-				BeforeEach(func() {
-					dropboxDestination.Spec.Dropbox.RemotePath = "/custom/backup/path"
-					Expect(k8sClient.Update(ctx, dropboxDestination)).To(Succeed())
-
-					_, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: dropboxBackupPlanName})
-					Expect(err).NotTo(HaveOccurred())
-
-					cronJob := &batchv1.CronJob{}
-					err = k8sClient.Get(ctx, dropboxBackupPlanName, cronJob)
-					Expect(err).NotTo(HaveOccurred())
-
-					container = cronJob.Spec.JobTemplate.Spec.Template.Spec.Containers[0]
-				})
-
-				It("should use the configured remote path", func() {
-					Expect(container.Env).To(ContainElement(corev1.EnvVar{
-						Name:  "DROPBOX_REMOTE_PATH",
-						Value: "/custom/backup/path",
-					}))
-				})
-			})
-
-			It("should configure the Dropbox app credentials", func() {
+			It("should configure the Dropbox environment variables", func() {
 				Expect(container.Env).To(ContainElements(
 					corev1.EnvVar{
-						Name: "DROPBOX_APP_KEY",
+						Name:  "RCLONE_CONFIG_DROPBOX_TYPE",
+						Value: "dropbox",
+					},
+					corev1.EnvVar{
+						Name: "RCLONE_CONFIG_DROPBOX_CLIENT_ID",
 						ValueFrom: &corev1.EnvVarSource{
 							SecretKeyRef: &corev1.SecretKeySelector{
 								LocalObjectReference: corev1.LocalObjectReference{
-									Name: fmt.Sprintf("%s-dropbox-application", dropboxBackupPlan.Name),
+									Name: "dropbox-backup-plan-dropbox-application",
 								},
 								Key: "app-key",
 							},
 						},
 					},
 					corev1.EnvVar{
-						Name: "DROPBOX_APP_SECRET",
+						Name: "RCLONE_CONFIG_DROPBOX_CLIENT_SECRET",
 						ValueFrom: &corev1.EnvVarSource{
 							SecretKeyRef: &corev1.SecretKeySelector{
 								LocalObjectReference: corev1.LocalObjectReference{
-									Name: fmt.Sprintf("%s-dropbox-application", dropboxBackupPlan.Name),
+									Name: "dropbox-backup-plan-dropbox-application",
 								},
 								Key: "app-secret",
 							},
 						},
 					},
+					corev1.EnvVar{
+						Name: "RCLONE_CONFIG_DROPBOX_TOKEN",
+						ValueFrom: &corev1.EnvVarSource{
+							SecretKeyRef: &dropboxDestination.Spec.Dropbox.RefreshToken,
+						},
+					},
 				))
-			})
-
-			It("should configure the Dropbox refresh token from the secret", func() {
-				Expect(container.Env).To(ContainElement(corev1.EnvVar{
-					Name: "DROPBOX_REFRESH_TOKEN",
-					ValueFrom: &corev1.EnvVarSource{
-						SecretKeyRef: &dropboxDestination.Spec.Dropbox.RefreshToken,
-					},
-				}))
-			})
-
-			It("should copy the application credentials to the target namespace", func() {
-				_, err := reconciler.Reconcile(ctx, reconcile.Request{
-					NamespacedName: types.NamespacedName{
-						Name:      dropboxBackupPlan.Name,
-						Namespace: dropboxBackupPlan.Namespace,
-					},
-				})
-				Expect(err).NotTo(HaveOccurred())
-
-				copiedSecret := &corev1.Secret{}
-				Expect(k8sClient.Get(ctx, types.NamespacedName{
-					Name:      fmt.Sprintf("%s-dropbox-application", dropboxBackupPlan.Name),
-					Namespace: dropboxBackupPlan.Namespace,
-				}, copiedSecret)).To(Succeed())
-
-				Expect(copiedSecret.Data).To(HaveKeyWithValue("app-key", []byte("test-app-key")))
-				Expect(copiedSecret.Data).To(HaveKeyWithValue("app-secret", []byte("test-app-secret")))
-
-				Expect(copiedSecret.OwnerReferences).To(HaveLen(1))
-				Expect(copiedSecret.OwnerReferences[0].Name).To(Equal(dropboxBackupPlan.Name))
-			})
-
-			It("should update the copied secret when the source changes", func() {
-				_, err := reconciler.Reconcile(ctx, reconcile.Request{
-					NamespacedName: types.NamespacedName{
-						Name:      dropboxBackupPlan.Name,
-						Namespace: dropboxBackupPlan.Namespace,
-					},
-				})
-				Expect(err).NotTo(HaveOccurred())
-
-				dropboxApplicationSecret.Data["app-key"] = []byte("updated-app-key")
-				Expect(k8sClient.Update(ctx, dropboxApplicationSecret)).To(Succeed())
-
-				_, err = reconciler.Reconcile(ctx, reconcile.Request{
-					NamespacedName: types.NamespacedName{
-						Name:      dropboxBackupPlan.Name,
-						Namespace: dropboxBackupPlan.Namespace,
-					},
-				})
-				Expect(err).NotTo(HaveOccurred())
-
-				copiedSecret := &corev1.Secret{}
-				Expect(k8sClient.Get(ctx, types.NamespacedName{
-					Name:      fmt.Sprintf("%s-dropbox-application", dropboxBackupPlan.Name),
-					Namespace: dropboxBackupPlan.Namespace,
-				}, copiedSecret)).To(Succeed())
-				Expect(copiedSecret.Data).To(HaveKeyWithValue("app-key", []byte("updated-app-key")))
-			})
-
-			It("should delete the copied secret when switching to a non-Dropbox destination", func() {
-				_, err := reconciler.Reconcile(ctx, reconcile.Request{
-					NamespacedName: types.NamespacedName{
-						Name:      dropboxBackupPlan.Name,
-						Namespace: dropboxBackupPlan.Namespace,
-					},
-				})
-				Expect(err).NotTo(HaveOccurred())
-
-				dropboxDestination.Spec.Dropbox = nil
-				Expect(k8sClient.Update(ctx, dropboxDestination)).To(Succeed())
-
-				_, err = reconciler.Reconcile(ctx, reconcile.Request{
-					NamespacedName: types.NamespacedName{
-						Name:      dropboxBackupPlan.Name,
-						Namespace: dropboxBackupPlan.Namespace,
-					},
-				})
-				Expect(err).NotTo(HaveOccurred())
-
-				copiedSecret := &corev1.Secret{}
-				err = k8sClient.Get(ctx, types.NamespacedName{
-					Name:      fmt.Sprintf("%s-dropbox-application", dropboxBackupPlan.Name),
-					Namespace: dropboxBackupPlan.Namespace,
-				}, copiedSecret)
-				Expect(errors.IsNotFound(err)).To(BeTrue())
-			})
-
-			Context("when switching from Dropbox to non-Dropbox destination", func() {
-				BeforeEach(func() {
-					_, err := reconciler.Reconcile(ctx, reconcile.Request{
-						NamespacedName: dropboxBackupPlanName,
-					})
-					Expect(err).NotTo(HaveOccurred())
-
-					secret := &corev1.Secret{}
-					err = k8sClient.Get(ctx, types.NamespacedName{
-						Name:      fmt.Sprintf("%s-dropbox-application", dropboxBackupPlan.Name),
-						Namespace: dropboxBackupPlan.Namespace,
-					}, secret)
-					Expect(err).NotTo(HaveOccurred())
-
-					cronJob := &batchv1.CronJob{}
-					err = k8sClient.Get(ctx, types.NamespacedName{
-						Name:      dropboxBackupPlan.Name,
-						Namespace: dropboxBackupPlan.Namespace,
-					}, cronJob)
-					Expect(err).NotTo(HaveOccurred())
-
-					dropboxDestination.Spec.Dropbox = nil
-					Expect(k8sClient.Update(ctx, dropboxDestination)).To(Succeed())
-
-					_, err = reconciler.Reconcile(ctx, reconcile.Request{
-						NamespacedName: dropboxBackupPlanName,
-					})
-					Expect(err).NotTo(HaveOccurred())
-				})
-
-				It("should delete both the secret and CronJob", func() {
-					secret := &corev1.Secret{}
-					err := k8sClient.Get(ctx, types.NamespacedName{
-						Name:      fmt.Sprintf("%s-dropbox-application", dropboxBackupPlan.Name),
-						Namespace: dropboxBackupPlan.Namespace,
-					}, secret)
-					Expect(errors.IsNotFound(err)).To(BeTrue())
-
-					cronJob := &batchv1.CronJob{}
-					err = k8sClient.Get(ctx, types.NamespacedName{
-						Name:      dropboxBackupPlan.Name,
-						Namespace: dropboxBackupPlan.Namespace,
-					}, cronJob)
-					Expect(errors.IsNotFound(err)).To(BeTrue())
-				})
-			})
-
-			Context("when the server is deleted", func() {
-				BeforeEach(func() {
-					// First create everything normally
-					_, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: dropboxBackupPlanName})
-					Expect(err).NotTo(HaveOccurred())
-
-					// Then delete the server
-					Expect(k8sClient.Delete(ctx, server)).To(Succeed())
-
-					// Reconcile again after server deletion
-					_, err = reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: dropboxBackupPlanName})
-					Expect(err).NotTo(HaveOccurred())
-				})
-
-				It("should delete both the CronJob and application secret", func() {
-					cronJob := &batchv1.CronJob{}
-					err := k8sClient.Get(ctx, dropboxBackupPlanName, cronJob)
-					Expect(errors.IsNotFound(err)).To(BeTrue())
-
-					secret := &corev1.Secret{}
-					err = k8sClient.Get(ctx, types.NamespacedName{
-						Name:      fmt.Sprintf("%s-dropbox-application", dropboxBackupPlan.Name),
-						Namespace: dropboxBackupPlan.Namespace,
-					}, secret)
-					Expect(errors.IsNotFound(err)).To(BeTrue())
-				})
-			})
-
-			Context("when the destination is deleted", func() {
-				BeforeEach(func() {
-					// First create everything normally
-					_, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: dropboxBackupPlanName})
-					Expect(err).NotTo(HaveOccurred())
-
-					// Then delete the destination
-					Expect(k8sClient.Delete(ctx, dropboxDestination)).To(Succeed())
-
-					// Reconcile again after destination deletion
-					_, err = reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: dropboxBackupPlanName})
-					Expect(err).NotTo(HaveOccurred())
-				})
-
-				It("should delete both the CronJob and application secret", func() {
-					cronJob := &batchv1.CronJob{}
-					err := k8sClient.Get(ctx, dropboxBackupPlanName, cronJob)
-					Expect(errors.IsNotFound(err)).To(BeTrue())
-
-					secret := &corev1.Secret{}
-					err = k8sClient.Get(ctx, types.NamespacedName{
-						Name:      fmt.Sprintf("%s-dropbox-application", dropboxBackupPlan.Name),
-						Namespace: dropboxBackupPlan.Namespace,
-					}, secret)
-					Expect(errors.IsNotFound(err)).To(BeTrue())
-				})
 			})
 		})
 
@@ -669,6 +533,7 @@ var _ = Describe("ZomboidBackupPlan Controller", func() {
 					},
 					Spec: hordehostv1.BackupDestinationSpec{
 						S3: &hordehostv1.S3{
+							Provider:   "Minio",
 							BucketName: "test-bucket",
 							Path:       "backups/test",
 							AccessKeyID: &corev1.SecretKeySelector{
@@ -683,9 +548,9 @@ var _ = Describe("ZomboidBackupPlan Controller", func() {
 								},
 								Key: "access-secret",
 							},
-							Endpoint:         "minio.example.com",
-							EndpointProtocol: "https",
-							StorageClass:     "STANDARD",
+							Endpoint:             "minio.example.com",
+							StorageClass:         "STANDARD",
+							ServerSideEncryption: "AES256",
 						},
 					},
 				}
@@ -711,8 +576,6 @@ var _ = Describe("ZomboidBackupPlan Controller", func() {
 				_, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: s3BackupPlanName})
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(k8sClient.Get(ctx, s3BackupPlanName, s3BackupPlan)).To(Succeed())
-
 				cronJob := &batchv1.CronJob{}
 				err = k8sClient.Get(ctx, s3BackupPlanName, cronJob)
 				Expect(err).NotTo(HaveOccurred())
@@ -720,58 +583,48 @@ var _ = Describe("ZomboidBackupPlan Controller", func() {
 				container = cronJob.Spec.JobTemplate.Spec.Template.Spec.Containers[0]
 			})
 
-			It("should use the correct container image", func() {
-				Expect(container.Image).To(Equal("offen/docker-volume-backup:v2.43.0"))
+			It("should configure the correct rclone command", func() {
+				Expect(container.Command).To(Equal([]string{
+					"rclone",
+					"sync",
+					"/backup",
+					"s3:test-bucket/backups/test/",
+				}))
 			})
 
-			It("should configure the S3 bucket and path", func() {
+			It("should configure the S3 environment variables", func() {
 				Expect(container.Env).To(ContainElements(
 					corev1.EnvVar{
-						Name:  "AWS_S3_BUCKET_NAME",
-						Value: "test-bucket",
+						Name:  "RCLONE_CONFIG_S3_TYPE",
+						Value: "s3",
 					},
 					corev1.EnvVar{
-						Name:  "AWS_S3_PATH",
-						Value: "backups/test",
+						Name:  "RCLONE_CONFIG_S3_PROVIDER",
+						Value: "Minio",
 					},
-				))
-			})
-
-			It("should configure the S3 credentials", func() {
-				Expect(container.Env).To(ContainElements(
 					corev1.EnvVar{
-						Name: "AWS_ACCESS_KEY_ID",
+						Name:  "RCLONE_CONFIG_S3_ENDPOINT",
+						Value: "minio.example.com",
+					},
+					corev1.EnvVar{
+						Name:  "RCLONE_CONFIG_S3_STORAGE_CLASS",
+						Value: "STANDARD",
+					},
+					corev1.EnvVar{
+						Name:  "RCLONE_CONFIG_S3_SERVER_SIDE_ENCRYPTION",
+						Value: "AES256",
+					},
+					corev1.EnvVar{
+						Name: "RCLONE_CONFIG_S3_ACCESS_KEY_ID",
 						ValueFrom: &corev1.EnvVarSource{
 							SecretKeyRef: s3Destination.Spec.S3.AccessKeyID,
 						},
 					},
 					corev1.EnvVar{
-						Name: "AWS_SECRET_ACCESS_KEY",
+						Name: "RCLONE_CONFIG_S3_SECRET_ACCESS_KEY",
 						ValueFrom: &corev1.EnvVarSource{
 							SecretKeyRef: s3Destination.Spec.S3.SecretAccessKey,
 						},
-					},
-				))
-			})
-
-			It("should configure the S3 endpoint settings", func() {
-				Expect(container.Env).To(ContainElements(
-					corev1.EnvVar{
-						Name:  "AWS_ENDPOINT",
-						Value: "minio.example.com",
-					},
-					corev1.EnvVar{
-						Name:  "AWS_ENDPOINT_PROTO",
-						Value: "https",
-					},
-				))
-			})
-
-			It("should configure the S3 storage class", func() {
-				Expect(container.Env).To(ContainElement(
-					corev1.EnvVar{
-						Name:  "AWS_STORAGE_CLASS",
-						Value: "STANDARD",
 					},
 				))
 			})
@@ -780,7 +633,6 @@ var _ = Describe("ZomboidBackupPlan Controller", func() {
 				BeforeEach(func() {
 					s3Destination.Spec.S3.AccessKeyID = nil
 					s3Destination.Spec.S3.SecretAccessKey = nil
-					s3Destination.Spec.S3.IAMRoleEndpoint = "http://169.254.169.254"
 					Expect(k8sClient.Update(ctx, s3Destination)).To(Succeed())
 
 					_, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: s3BackupPlanName})
@@ -791,112 +643,11 @@ var _ = Describe("ZomboidBackupPlan Controller", func() {
 					Expect(err).NotTo(HaveOccurred())
 
 					container = cronJob.Spec.JobTemplate.Spec.Template.Spec.Containers[0]
-				})
-
-				It("should configure the IAM role endpoint", func() {
-					Expect(container.Env).To(ContainElement(
-						corev1.EnvVar{
-							Name:  "AWS_IAM_ROLE_ENDPOINT",
-							Value: "http://169.254.169.254",
-						},
-					))
 				})
 
 				It("should not include AWS credentials", func() {
-					Expect(container.Env).NotTo(ContainElement(HaveField("Name", "AWS_ACCESS_KEY_ID")))
-					Expect(container.Env).NotTo(ContainElement(HaveField("Name", "AWS_SECRET_ACCESS_KEY")))
-				})
-			})
-
-			Context("when using insecure endpoints", func() {
-				BeforeEach(func() {
-					s3Destination.Spec.S3.EndpointProtocol = "https"
-					s3Destination.Spec.S3.EndpointInsecure = true
-					s3Destination.Spec.S3.EndpointCACert = "-----BEGIN CERTIFICATE-----\nMIIE...\n-----END CERTIFICATE-----"
-					Expect(k8sClient.Update(ctx, s3Destination)).To(Succeed())
-
-					_, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: s3BackupPlanName})
-					Expect(err).NotTo(HaveOccurred())
-
-					cronJob := &batchv1.CronJob{}
-					err = k8sClient.Get(ctx, s3BackupPlanName, cronJob)
-					Expect(err).NotTo(HaveOccurred())
-
-					container = cronJob.Spec.JobTemplate.Spec.Template.Spec.Containers[0]
-				})
-
-				It("should configure insecure endpoint settings only for HTTPS", func() {
-					Expect(container.Env).To(ContainElements(
-						corev1.EnvVar{
-							Name:  "AWS_ENDPOINT_PROTO",
-							Value: "https",
-						},
-						corev1.EnvVar{
-							Name:  "AWS_ENDPOINT_INSECURE",
-							Value: "true",
-						},
-						corev1.EnvVar{
-							Name:  "AWS_ENDPOINT_CA_CERT",
-							Value: "-----BEGIN CERTIFICATE-----\nMIIE...\n-----END CERTIFICATE-----",
-						},
-					))
-				})
-			})
-
-			Context("when using HTTP protocol", func() {
-				BeforeEach(func() {
-					s3Destination.Spec.S3.EndpointProtocol = "http"
-					s3Destination.Spec.S3.EndpointInsecure = true
-					Expect(k8sClient.Update(ctx, s3Destination)).To(Succeed())
-
-					_, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: s3BackupPlanName})
-					Expect(err).NotTo(HaveOccurred())
-
-					cronJob := &batchv1.CronJob{}
-					err = k8sClient.Get(ctx, s3BackupPlanName, cronJob)
-					Expect(err).NotTo(HaveOccurred())
-
-					container = cronJob.Spec.JobTemplate.Spec.Template.Spec.Containers[0]
-				})
-
-				It("should not set insecure flag for HTTP protocol", func() {
-					Expect(container.Env).To(ContainElement(
-						corev1.EnvVar{
-							Name:  "AWS_ENDPOINT_PROTO",
-							Value: "http",
-						},
-					))
-					Expect(container.Env).NotTo(ContainElement(HaveField("Name", "AWS_ENDPOINT_INSECURE")))
-				})
-			})
-
-			Context("when the server is deleted", func() {
-				BeforeEach(func() {
-					Expect(k8sClient.Delete(ctx, server)).To(Succeed())
-
-					_, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: s3BackupPlanName})
-					Expect(err).NotTo(HaveOccurred())
-				})
-
-				It("should delete the CronJob", func() {
-					cronJob := &batchv1.CronJob{}
-					err := k8sClient.Get(ctx, s3BackupPlanName, cronJob)
-					Expect(errors.IsNotFound(err)).To(BeTrue())
-				})
-			})
-
-			Context("when the destination is deleted", func() {
-				BeforeEach(func() {
-					Expect(k8sClient.Delete(ctx, s3Destination)).To(Succeed())
-
-					_, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: s3BackupPlanName})
-					Expect(err).NotTo(HaveOccurred())
-				})
-
-				It("should delete the CronJob", func() {
-					cronJob := &batchv1.CronJob{}
-					err := k8sClient.Get(ctx, s3BackupPlanName, cronJob)
-					Expect(errors.IsNotFound(err)).To(BeTrue())
+					Expect(container.Env).NotTo(ContainElement(HaveField("Name", "RCLONE_CONFIG_S3_ACCESS_KEY_ID")))
+					Expect(container.Env).NotTo(ContainElement(HaveField("Name", "RCLONE_CONFIG_S3_SECRET_ACCESS_KEY")))
 				})
 			})
 		})

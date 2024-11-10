@@ -121,9 +121,9 @@ metadata:
   name: s3-destination
 spec:
   s3:
+    provider: "Minio"
     bucketName: zomboid-backups
-    endpoint: minio:9000
-    endpointProtocol: "http"
+    endpoint: http://minio:9000
     accessKeyId:
       name: minio-credentials
       key: access-key
@@ -151,10 +151,10 @@ metadata:
   name: dropbox-destination
 spec:
   dropbox:
-    remotePath: "/my/test/path"
+    path: my/test/path
     refreshToken:
       name: dropbox-token
-      key: refresh-token
+      key: token
 ---
 apiVersion: horde.host/v1
 kind: ZomboidBackupPlan

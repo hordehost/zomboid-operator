@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"strings"
 
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -274,18 +275,19 @@ func (r *ZomboidBackupPlanReconciler) reconcileApplicationSecret(ctx context.Con
 func (r *ZomboidBackupPlanReconciler) reconcileCronJob(ctx context.Context, backupPlan *hordehostv1.ZomboidBackupPlan, server *hordehostv1.ZomboidServer, destination *hordehostv1.BackupDestination) error {
 	var err error
 
-	var container *corev1.Container
+	var env []corev1.EnvVar
+	var remotePath string
 	if destination != nil {
 		switch {
 		case destination.Spec.Dropbox != nil:
-			container = r.dropboxContainer(*destination.Spec.Dropbox, backupPlan)
+			env, remotePath = r.dropboxConfiguration(*destination.Spec.Dropbox, backupPlan)
 		case destination.Spec.S3 != nil:
-			container = r.s3Container(*destination.Spec.S3)
+			env, remotePath = r.s3Configuration(*destination.Spec.S3)
 		}
 	}
 
 	// If no provider is active or server is missing, we shouldn't have a CronJob
-	shouldExist := server != nil && container != nil
+	shouldExist := server != nil && len(env) > 0
 
 	cronJob := &batchv1.CronJob{}
 	err = r.Get(ctx, types.NamespacedName{
@@ -315,6 +317,25 @@ func (r *ZomboidBackupPlanReconciler) reconcileCronJob(ctx context.Context, back
 			return err
 		}
 
+		container := corev1.Container{
+			Name:  "backup",
+			Image: "rclone/rclone:1.68.1",
+			Command: []string{
+				"rclone",
+				"sync",
+				"/backup",
+				remotePath,
+			},
+			Env: env,
+			VolumeMounts: []corev1.VolumeMount{
+				{
+					Name:      "backup-data",
+					MountPath: "/backup",
+					ReadOnly:  true,
+				},
+			},
+		}
+
 		cronJob.Spec = batchv1.CronJobSpec{
 			Schedule: backupPlan.Spec.Schedule,
 			JobTemplate: batchv1.JobTemplateSpec{
@@ -322,7 +343,7 @@ func (r *ZomboidBackupPlanReconciler) reconcileCronJob(ctx context.Context, back
 					Template: corev1.PodTemplateSpec{
 						Spec: corev1.PodSpec{
 							RestartPolicy: corev1.RestartPolicyNever,
-							Containers:    []corev1.Container{*container},
+							Containers:    []corev1.Container{container},
 							Volumes: []corev1.Volume{
 								{
 									Name: "backup-data",
@@ -344,19 +365,22 @@ func (r *ZomboidBackupPlanReconciler) reconcileCronJob(ctx context.Context, back
 	return err
 }
 
-func (r *ZomboidBackupPlanReconciler) dropboxContainer(dropbox hordehostv1.Dropbox, backupPlan *hordehostv1.ZomboidBackupPlan) *corev1.Container {
-	remotePath := fmt.Sprintf("/%s/zomboid/%s", backupPlan.Namespace, backupPlan.Spec.Server.Name)
-	if dropbox.RemotePath != "" {
-		remotePath = dropbox.RemotePath
+func (r *ZomboidBackupPlanReconciler) dropboxConfiguration(dropbox hordehostv1.Dropbox, backupPlan *hordehostv1.ZomboidBackupPlan) ([]corev1.EnvVar, string) {
+	var remotePath string
+	if dropbox.Path != "" {
+		// Strip leading slash for app folder scoping
+		remotePath = strings.TrimPrefix(dropbox.Path, "/")
+	} else {
+		remotePath = fmt.Sprintf("%s/zomboid/%s", backupPlan.Namespace, backupPlan.Spec.Server.Name)
 	}
 
 	env := []corev1.EnvVar{
 		{
-			Name:  "DROPBOX_REMOTE_PATH",
-			Value: remotePath,
+			Name:  "RCLONE_CONFIG_DROPBOX_TYPE",
+			Value: "dropbox",
 		},
 		{
-			Name: "DROPBOX_APP_KEY",
+			Name: "RCLONE_CONFIG_DROPBOX_CLIENT_ID",
 			ValueFrom: &corev1.EnvVarSource{
 				SecretKeyRef: &corev1.SecretKeySelector{
 					LocalObjectReference: corev1.LocalObjectReference{
@@ -367,7 +391,7 @@ func (r *ZomboidBackupPlanReconciler) dropboxContainer(dropbox hordehostv1.Dropb
 			},
 		},
 		{
-			Name: "DROPBOX_APP_SECRET",
+			Name: "RCLONE_CONFIG_DROPBOX_CLIENT_SECRET",
 			ValueFrom: &corev1.EnvVarSource{
 				SecretKeyRef: &corev1.SecretKeySelector{
 					LocalObjectReference: corev1.LocalObjectReference{
@@ -378,50 +402,45 @@ func (r *ZomboidBackupPlanReconciler) dropboxContainer(dropbox hordehostv1.Dropb
 			},
 		},
 		{
-			Name: "DROPBOX_REFRESH_TOKEN",
+			Name: "RCLONE_CONFIG_DROPBOX_TOKEN",
 			ValueFrom: &corev1.EnvVarSource{
-				SecretKeyRef: &corev1.SecretKeySelector{
-					LocalObjectReference: corev1.LocalObjectReference{
-						Name: dropbox.RefreshToken.Name,
-					},
-					Key: dropbox.RefreshToken.Key,
-				},
+				SecretKeyRef: &dropbox.RefreshToken,
 			},
 		},
 	}
 
-	return &corev1.Container{
-		Name:    "backup",
-		Image:   "offen/docker-volume-backup:v2.43.0",
-		Command: []string{"/usr/bin/backup"},
-		Env:     env,
-		VolumeMounts: []corev1.VolumeMount{
-			{
-				Name:      "backup-data",
-				MountPath: "/backup",
-			},
-		},
-	}
+	return env, fmt.Sprintf("dropbox:%s", remotePath)
 }
 
-func (r *ZomboidBackupPlanReconciler) s3Container(s3 hordehostv1.S3) *corev1.Container {
+func (r *ZomboidBackupPlanReconciler) s3Configuration(s3 hordehostv1.S3) ([]corev1.EnvVar, string) {
 	env := []corev1.EnvVar{
 		{
-			Name:  "AWS_S3_BUCKET_NAME",
-			Value: s3.BucketName,
+			Name:  "RCLONE_CONFIG_S3_TYPE",
+			Value: "s3",
+		},
+		{
+			Name:  "RCLONE_CONFIG_S3_PROVIDER",
+			Value: s3.Provider,
 		},
 	}
 
-	if s3.Path != "" {
+	if s3.Region != "" {
 		env = append(env, corev1.EnvVar{
-			Name:  "AWS_S3_PATH",
-			Value: s3.Path,
+			Name:  "RCLONE_CONFIG_S3_REGION",
+			Value: s3.Region,
+		})
+	}
+
+	if s3.Endpoint != "" {
+		env = append(env, corev1.EnvVar{
+			Name:  "RCLONE_CONFIG_S3_ENDPOINT",
+			Value: s3.Endpoint,
 		})
 	}
 
 	if s3.AccessKeyID != nil {
 		env = append(env, corev1.EnvVar{
-			Name: "AWS_ACCESS_KEY_ID",
+			Name: "RCLONE_CONFIG_S3_ACCESS_KEY_ID",
 			ValueFrom: &corev1.EnvVarSource{
 				SecretKeyRef: s3.AccessKeyID,
 			},
@@ -430,73 +449,31 @@ func (r *ZomboidBackupPlanReconciler) s3Container(s3 hordehostv1.S3) *corev1.Con
 
 	if s3.SecretAccessKey != nil {
 		env = append(env, corev1.EnvVar{
-			Name: "AWS_SECRET_ACCESS_KEY",
+			Name: "RCLONE_CONFIG_S3_SECRET_ACCESS_KEY",
 			ValueFrom: &corev1.EnvVarSource{
 				SecretKeyRef: s3.SecretAccessKey,
 			},
 		})
 	}
 
-	if s3.IAMRoleEndpoint != "" {
-		env = append(env, corev1.EnvVar{
-			Name:  "AWS_IAM_ROLE_ENDPOINT",
-			Value: s3.IAMRoleEndpoint,
-		})
-	}
-
-	if s3.Endpoint != "" {
-		env = append(env, corev1.EnvVar{
-			Name:  "AWS_ENDPOINT",
-			Value: s3.Endpoint,
-		})
-	}
-
-	if s3.EndpointProtocol != "" {
-		env = append(env, corev1.EnvVar{
-			Name:  "AWS_ENDPOINT_PROTO",
-			Value: s3.EndpointProtocol,
-		})
-
-		// Only set AWS_ENDPOINT_INSECURE when using HTTPS protocol
-		if s3.EndpointProtocol == "https" && s3.EndpointInsecure {
-			env = append(env, corev1.EnvVar{
-				Name:  "AWS_ENDPOINT_INSECURE",
-				Value: "true",
-			})
-		}
-	}
-
-	if s3.EndpointCACert != "" {
-		env = append(env, corev1.EnvVar{
-			Name:  "AWS_ENDPOINT_CA_CERT",
-			Value: s3.EndpointCACert,
-		})
-	}
-
 	if s3.StorageClass != "" {
 		env = append(env, corev1.EnvVar{
-			Name:  "AWS_STORAGE_CLASS",
+			Name:  "RCLONE_CONFIG_S3_STORAGE_CLASS",
 			Value: s3.StorageClass,
 		})
 	}
 
-	if s3.PartSize != nil {
+	if s3.ServerSideEncryption != "" {
 		env = append(env, corev1.EnvVar{
-			Name:  "AWS_PART_SIZE",
-			Value: fmt.Sprintf("%d", *s3.PartSize),
+			Name:  "RCLONE_CONFIG_S3_SERVER_SIDE_ENCRYPTION",
+			Value: s3.ServerSideEncryption,
 		})
 	}
 
-	return &corev1.Container{
-		Name:    "backup",
-		Image:   "offen/docker-volume-backup:v2.43.0",
-		Command: []string{"/usr/bin/backup"},
-		Env:     env,
-		VolumeMounts: []corev1.VolumeMount{
-			{
-				Name:      "backup-data",
-				MountPath: "/backup",
-			},
-		},
+	s3Path := s3.Path
+	if s3Path != "" && !strings.HasSuffix(s3Path, "/") {
+		s3Path += "/"
 	}
+
+	return env, fmt.Sprintf("s3:%s/%s", s3.BucketName, s3Path)
 }
