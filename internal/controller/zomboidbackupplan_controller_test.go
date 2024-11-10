@@ -42,8 +42,7 @@ var _ = Describe("ZomboidBackupPlan Controller", func() {
 			Expect(err).NotTo(HaveOccurred())
 		}
 
-		// This secret needs to exist just because we happen to be using
-		// dropbox for the common backup destination tests.
+		// Create application secrets in operator namespace
 		applicationSecret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "dropbox-application",
@@ -58,6 +57,7 @@ var _ = Describe("ZomboidBackupPlan Controller", func() {
 	})
 
 	AfterEach(func() {
+		// Clean up application secrets
 		Expect(k8sClient.Delete(ctx, applicationSecret)).To(Succeed())
 	})
 
@@ -100,18 +100,18 @@ var _ = Describe("ZomboidBackupPlan Controller", func() {
 					Namespace: namespace,
 				}
 
-				// Uses a Dropbox destination just because we need something, but that
-				// doesn't matter for these tests
-				secret := &corev1.Secret{
+				// Create an S3 destination for testing common functionality
+				s3Secret := &corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      "dropbox-token",
+						Name:      "s3-credentials",
 						Namespace: namespace,
 					},
 					StringData: map[string]string{
-						"token": "test-refresh-token",
+						"access-key":    "test-access-key",
+						"access-secret": "test-access-secret",
 					},
 				}
-				Expect(k8sClient.Create(ctx, secret)).To(Succeed())
+				Expect(k8sClient.Create(ctx, s3Secret)).To(Succeed())
 
 				destination = &hordehostv1.BackupDestination{
 					ObjectMeta: metav1.ObjectMeta{
@@ -119,12 +119,20 @@ var _ = Describe("ZomboidBackupPlan Controller", func() {
 						Namespace: namespace,
 					},
 					Spec: hordehostv1.BackupDestinationSpec{
-						Dropbox: &hordehostv1.Dropbox{
-							RefreshToken: corev1.SecretKeySelector{
+						S3: &hordehostv1.S3{
+							Provider:   "AWS",
+							BucketName: "test-bucket",
+							AccessKeyID: &corev1.SecretKeySelector{
 								LocalObjectReference: corev1.LocalObjectReference{
-									Name: secret.Name,
+									Name: s3Secret.Name,
 								},
-								Key: "token",
+								Key: "access-key",
+							},
+							SecretAccessKey: &corev1.SecretKeySelector{
+								LocalObjectReference: corev1.LocalObjectReference{
+									Name: s3Secret.Name,
+								},
+								Key: "access-secret",
 							},
 						},
 					},
@@ -337,7 +345,7 @@ var _ = Describe("ZomboidBackupPlan Controller", func() {
 					},
 					Spec: hordehostv1.BackupDestinationSpec{
 						Dropbox: &hordehostv1.Dropbox{
-							RefreshToken: corev1.SecretKeySelector{
+							Token: corev1.SecretKeySelector{
 								LocalObjectReference: corev1.LocalObjectReference{
 									Name: dropboxSecret.Name,
 								},
@@ -492,7 +500,7 @@ var _ = Describe("ZomboidBackupPlan Controller", func() {
 					corev1.EnvVar{
 						Name: "RCLONE_CONFIG_DROPBOX_TOKEN",
 						ValueFrom: &corev1.EnvVarSource{
-							SecretKeyRef: &dropboxDestination.Spec.Dropbox.RefreshToken,
+							SecretKeyRef: &dropboxDestination.Spec.Dropbox.Token,
 						},
 					},
 				))
@@ -648,6 +656,204 @@ var _ = Describe("ZomboidBackupPlan Controller", func() {
 				It("should not include AWS credentials", func() {
 					Expect(container.Env).NotTo(ContainElement(HaveField("Name", "RCLONE_CONFIG_S3_ACCESS_KEY_ID")))
 					Expect(container.Env).NotTo(ContainElement(HaveField("Name", "RCLONE_CONFIG_S3_SECRET_ACCESS_KEY")))
+				})
+			})
+		})
+
+		When("using a Google Drive destination", func() {
+			var (
+				googleDriveBackupPlanName types.NamespacedName
+				googleDriveDestination    *hordehostv1.BackupDestination
+				googleDriveBackupPlan     *hordehostv1.ZomboidBackupPlan
+				googleDriveSecret         *corev1.Secret
+				googleDriveAppSecret      *corev1.Secret
+				container                 corev1.Container
+			)
+
+			BeforeEach(func() {
+				// Create Google Drive application secret in operator namespace
+				googleDriveAppSecret = &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "googledrive-application",
+						Namespace: "zomboid-system",
+					},
+					Data: map[string][]byte{
+						"client-id":     []byte("test-client-id"),
+						"client-secret": []byte("test-client-secret"),
+					},
+				}
+				Expect(k8sClient.Create(ctx, googleDriveAppSecret)).To(Succeed())
+
+				googleDriveBackupPlanName = types.NamespacedName{
+					Name:      "googledrive-backup-plan",
+					Namespace: namespace,
+				}
+
+				googleDriveSecret = &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "googledrive-token",
+						Namespace: namespace,
+					},
+					StringData: map[string]string{
+						"token": "test-token",
+					},
+				}
+				Expect(k8sClient.Create(ctx, googleDriveSecret)).To(Succeed())
+
+				googleDriveDestination = &hordehostv1.BackupDestination{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "googledrive-destination",
+						Namespace: namespace,
+					},
+					Spec: hordehostv1.BackupDestinationSpec{
+						GoogleDrive: &hordehostv1.GoogleDrive{
+							Token: corev1.SecretKeySelector{
+								LocalObjectReference: corev1.LocalObjectReference{
+									Name: googleDriveSecret.Name,
+								},
+								Key: "token",
+							},
+							Path:         "backups/test",
+							RootFolderID: "test-root-folder",
+							TeamDriveID:  "test-team-drive",
+						},
+					},
+				}
+				Expect(k8sClient.Create(ctx, googleDriveDestination)).To(Succeed())
+
+				googleDriveBackupPlan = &hordehostv1.ZomboidBackupPlan{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      googleDriveBackupPlanName.Name,
+						Namespace: googleDriveBackupPlanName.Namespace,
+					},
+					Spec: hordehostv1.ZomboidBackupPlanSpec{
+						Server: corev1.LocalObjectReference{
+							Name: server.Name,
+						},
+						Destination: corev1.LocalObjectReference{
+							Name: googleDriveDestination.Name,
+						},
+						Schedule: "0 3 * * *",
+					},
+				}
+				Expect(k8sClient.Create(ctx, googleDriveBackupPlan)).To(Succeed())
+
+				_, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: googleDriveBackupPlanName})
+				Expect(err).NotTo(HaveOccurred())
+
+				cronJob := &batchv1.CronJob{}
+				err = k8sClient.Get(ctx, googleDriveBackupPlanName, cronJob)
+				Expect(err).NotTo(HaveOccurred())
+
+				container = cronJob.Spec.JobTemplate.Spec.Template.Spec.Containers[0]
+			})
+
+			AfterEach(func() {
+				Expect(k8sClient.Delete(ctx, googleDriveAppSecret)).To(Succeed())
+			})
+
+			It("should configure the correct rclone command", func() {
+				Expect(container.Command).To(Equal([]string{
+					"rclone",
+					"sync",
+					"/backup",
+					"gdrive:backups/test",
+				}))
+			})
+
+			It("should configure the Google Drive environment variables", func() {
+				Expect(container.Env).To(ContainElements(
+					corev1.EnvVar{
+						Name:  "RCLONE_CONFIG_GDRIVE_TYPE",
+						Value: "drive",
+					},
+					corev1.EnvVar{
+						Name: "RCLONE_CONFIG_GDRIVE_CLIENT_ID",
+						ValueFrom: &corev1.EnvVarSource{
+							SecretKeyRef: &corev1.SecretKeySelector{
+								LocalObjectReference: corev1.LocalObjectReference{
+									Name: "googledrive-backup-plan-googledrive-application",
+								},
+								Key: "client-id",
+							},
+						},
+					},
+					corev1.EnvVar{
+						Name: "RCLONE_CONFIG_GDRIVE_CLIENT_SECRET",
+						ValueFrom: &corev1.EnvVarSource{
+							SecretKeyRef: &corev1.SecretKeySelector{
+								LocalObjectReference: corev1.LocalObjectReference{
+									Name: "googledrive-backup-plan-googledrive-application",
+								},
+								Key: "client-secret",
+							},
+						},
+					},
+					corev1.EnvVar{
+						Name: "RCLONE_CONFIG_GDRIVE_TOKEN",
+						ValueFrom: &corev1.EnvVarSource{
+							SecretKeyRef: &googleDriveDestination.Spec.GoogleDrive.Token,
+						},
+					},
+					corev1.EnvVar{
+						Name:  "RCLONE_CONFIG_GDRIVE_SCOPE",
+						Value: "drive,drive.metadata.readonly",
+					},
+					corev1.EnvVar{
+						Name:  "RCLONE_CONFIG_GDRIVE_ROOT_FOLDER_ID",
+						Value: "test-root-folder",
+					},
+					corev1.EnvVar{
+						Name:  "RCLONE_CONFIG_GDRIVE_TEAM_DRIVE",
+						Value: "test-team-drive",
+					},
+				))
+			})
+
+			Context("with default path", func() {
+				BeforeEach(func() {
+					googleDriveDestination.Spec.GoogleDrive.Path = ""
+					Expect(k8sClient.Update(ctx, googleDriveDestination)).To(Succeed())
+
+					_, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: googleDriveBackupPlanName})
+					Expect(err).NotTo(HaveOccurred())
+
+					cronJob := &batchv1.CronJob{}
+					err = k8sClient.Get(ctx, googleDriveBackupPlanName, cronJob)
+					Expect(err).NotTo(HaveOccurred())
+
+					container = cronJob.Spec.JobTemplate.Spec.Template.Spec.Containers[0]
+				})
+
+				It("should use the default path format", func() {
+					Expect(container.Command).To(Equal([]string{
+						"rclone",
+						"sync",
+						"/backup",
+						fmt.Sprintf("gdrive:%s/zomboid/test-server", namespace),
+					}))
+				})
+			})
+
+			Context("without optional parameters", func() {
+				BeforeEach(func() {
+					googleDriveDestination.Spec.GoogleDrive.RootFolderID = ""
+					googleDriveDestination.Spec.GoogleDrive.TeamDriveID = ""
+					Expect(k8sClient.Update(ctx, googleDriveDestination)).To(Succeed())
+
+					_, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: googleDriveBackupPlanName})
+					Expect(err).NotTo(HaveOccurred())
+
+					cronJob := &batchv1.CronJob{}
+					err = k8sClient.Get(ctx, googleDriveBackupPlanName, cronJob)
+					Expect(err).NotTo(HaveOccurred())
+
+					container = cronJob.Spec.JobTemplate.Spec.Template.Spec.Containers[0]
+				})
+
+				It("should not include optional environment variables", func() {
+					Expect(container.Env).NotTo(ContainElement(HaveField("Name", "RCLONE_CONFIG_GDRIVE_ROOT_FOLDER_ID")))
+					Expect(container.Env).NotTo(ContainElement(HaveField("Name", "RCLONE_CONFIG_GDRIVE_TEAM_DRIVE")))
 				})
 			})
 		})

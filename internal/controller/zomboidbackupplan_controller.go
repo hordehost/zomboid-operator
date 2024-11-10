@@ -210,6 +210,12 @@ func (r *ZomboidBackupPlanReconciler) reconcileApplicationSecret(ctx context.Con
 			targetName:      fmt.Sprintf("%s-dropbox-application", backupPlan.Name),
 			keys:            []string{"app-key", "app-secret"},
 		},
+		"googledrive": {
+			sourceName:      "googledrive-application",
+			sourceNamespace: "zomboid-system",
+			targetName:      fmt.Sprintf("%s-googledrive-application", backupPlan.Name),
+			keys:            []string{"client-id", "client-secret"},
+		},
 	}
 
 	var desiredSecret *applicationSecret
@@ -217,6 +223,8 @@ func (r *ZomboidBackupPlanReconciler) reconcileApplicationSecret(ctx context.Con
 		switch {
 		case destination.Spec.Dropbox != nil:
 			desiredSecret = possibleSecrets["dropbox"]
+		case destination.Spec.GoogleDrive != nil:
+			desiredSecret = possibleSecrets["googledrive"]
 		}
 	}
 
@@ -281,6 +289,8 @@ func (r *ZomboidBackupPlanReconciler) reconcileCronJob(ctx context.Context, back
 		switch {
 		case destination.Spec.Dropbox != nil:
 			env, remotePath = r.dropboxConfiguration(*destination.Spec.Dropbox, backupPlan)
+		case destination.Spec.GoogleDrive != nil:
+			env, remotePath = r.googleDriveConfiguration(*destination.Spec.GoogleDrive, backupPlan)
 		case destination.Spec.S3 != nil:
 			env, remotePath = r.s3Configuration(*destination.Spec.S3)
 		}
@@ -404,7 +414,7 @@ func (r *ZomboidBackupPlanReconciler) dropboxConfiguration(dropbox hordehostv1.D
 		{
 			Name: "RCLONE_CONFIG_DROPBOX_TOKEN",
 			ValueFrom: &corev1.EnvVarSource{
-				SecretKeyRef: &dropbox.RefreshToken,
+				SecretKeyRef: &dropbox.Token,
 			},
 		},
 	}
@@ -476,4 +486,68 @@ func (r *ZomboidBackupPlanReconciler) s3Configuration(s3 hordehostv1.S3) ([]core
 	}
 
 	return env, fmt.Sprintf("s3:%s/%s", s3.BucketName, s3Path)
+}
+
+func (r *ZomboidBackupPlanReconciler) googleDriveConfiguration(googleDrive hordehostv1.GoogleDrive, backupPlan *hordehostv1.ZomboidBackupPlan) ([]corev1.EnvVar, string) {
+	var remotePath string
+	if googleDrive.Path != "" {
+		remotePath = strings.TrimPrefix(googleDrive.Path, "/")
+	} else {
+		remotePath = fmt.Sprintf("%s/zomboid/%s", backupPlan.Namespace, backupPlan.Spec.Server.Name)
+	}
+
+	env := []corev1.EnvVar{
+		{
+			Name:  "RCLONE_CONFIG_GDRIVE_TYPE",
+			Value: "drive",
+		},
+		{
+			Name: "RCLONE_CONFIG_GDRIVE_CLIENT_ID",
+			ValueFrom: &corev1.EnvVarSource{
+				SecretKeyRef: &corev1.SecretKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: fmt.Sprintf("%s-googledrive-application", backupPlan.Name),
+					},
+					Key: "client-id",
+				},
+			},
+		},
+		{
+			Name: "RCLONE_CONFIG_GDRIVE_CLIENT_SECRET",
+			ValueFrom: &corev1.EnvVarSource{
+				SecretKeyRef: &corev1.SecretKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: fmt.Sprintf("%s-googledrive-application", backupPlan.Name),
+					},
+					Key: "client-secret",
+				},
+			},
+		},
+		{
+			Name: "RCLONE_CONFIG_GDRIVE_TOKEN",
+			ValueFrom: &corev1.EnvVarSource{
+				SecretKeyRef: &googleDrive.Token,
+			},
+		},
+		{
+			Name:  "RCLONE_CONFIG_GDRIVE_SCOPE",
+			Value: "drive,drive.metadata.readonly",
+		},
+	}
+
+	if googleDrive.RootFolderID != "" {
+		env = append(env, corev1.EnvVar{
+			Name:  "RCLONE_CONFIG_GDRIVE_ROOT_FOLDER_ID",
+			Value: googleDrive.RootFolderID,
+		})
+	}
+
+	if googleDrive.TeamDriveID != "" {
+		env = append(env, corev1.EnvVar{
+			Name:  "RCLONE_CONFIG_GDRIVE_TEAM_DRIVE",
+			Value: googleDrive.TeamDriveID,
+		})
+	}
+
+	return env, fmt.Sprintf("gdrive:%s", remotePath)
 }
