@@ -634,5 +634,271 @@ var _ = Describe("ZomboidBackupPlan Controller", func() {
 				})
 			})
 		})
+
+		When("using an S3 destination", func() {
+			var (
+				s3BackupPlanName types.NamespacedName
+				s3Destination    *hordehostv1.BackupDestination
+				s3BackupPlan     *hordehostv1.ZomboidBackupPlan
+				s3Secret         *corev1.Secret
+				container        corev1.Container
+			)
+
+			BeforeEach(func() {
+				s3BackupPlanName = types.NamespacedName{
+					Name:      "s3-backup-plan",
+					Namespace: namespace,
+				}
+
+				s3Secret = &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "s3-credentials",
+						Namespace: namespace,
+					},
+					StringData: map[string]string{
+						"access-key":    "test-access-key",
+						"access-secret": "test-access-secret",
+					},
+				}
+				Expect(k8sClient.Create(ctx, s3Secret)).To(Succeed())
+
+				s3Destination = &hordehostv1.BackupDestination{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "s3-destination",
+						Namespace: namespace,
+					},
+					Spec: hordehostv1.BackupDestinationSpec{
+						S3: &hordehostv1.S3{
+							BucketName: "test-bucket",
+							Path:       "backups/test",
+							AccessKeyID: &corev1.SecretKeySelector{
+								LocalObjectReference: corev1.LocalObjectReference{
+									Name: s3Secret.Name,
+								},
+								Key: "access-key",
+							},
+							SecretAccessKey: &corev1.SecretKeySelector{
+								LocalObjectReference: corev1.LocalObjectReference{
+									Name: s3Secret.Name,
+								},
+								Key: "access-secret",
+							},
+							Endpoint:         "minio.example.com",
+							EndpointProtocol: "https",
+							StorageClass:     "STANDARD",
+						},
+					},
+				}
+				Expect(k8sClient.Create(ctx, s3Destination)).To(Succeed())
+
+				s3BackupPlan = &hordehostv1.ZomboidBackupPlan{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      s3BackupPlanName.Name,
+						Namespace: s3BackupPlanName.Namespace,
+					},
+					Spec: hordehostv1.ZomboidBackupPlanSpec{
+						Server: corev1.LocalObjectReference{
+							Name: server.Name,
+						},
+						Destination: corev1.LocalObjectReference{
+							Name: s3Destination.Name,
+						},
+						Schedule: "0 3 * * *",
+					},
+				}
+				Expect(k8sClient.Create(ctx, s3BackupPlan)).To(Succeed())
+
+				_, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: s3BackupPlanName})
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(k8sClient.Get(ctx, s3BackupPlanName, s3BackupPlan)).To(Succeed())
+
+				cronJob := &batchv1.CronJob{}
+				err = k8sClient.Get(ctx, s3BackupPlanName, cronJob)
+				Expect(err).NotTo(HaveOccurred())
+
+				container = cronJob.Spec.JobTemplate.Spec.Template.Spec.Containers[0]
+			})
+
+			It("should use the correct container image", func() {
+				Expect(container.Image).To(Equal("offen/docker-volume-backup:v2.43.0"))
+			})
+
+			It("should configure the S3 bucket and path", func() {
+				Expect(container.Env).To(ContainElements(
+					corev1.EnvVar{
+						Name:  "AWS_S3_BUCKET_NAME",
+						Value: "test-bucket",
+					},
+					corev1.EnvVar{
+						Name:  "AWS_S3_PATH",
+						Value: "backups/test",
+					},
+				))
+			})
+
+			It("should configure the S3 credentials", func() {
+				Expect(container.Env).To(ContainElements(
+					corev1.EnvVar{
+						Name: "AWS_ACCESS_KEY_ID",
+						ValueFrom: &corev1.EnvVarSource{
+							SecretKeyRef: s3Destination.Spec.S3.AccessKeyID,
+						},
+					},
+					corev1.EnvVar{
+						Name: "AWS_SECRET_ACCESS_KEY",
+						ValueFrom: &corev1.EnvVarSource{
+							SecretKeyRef: s3Destination.Spec.S3.SecretAccessKey,
+						},
+					},
+				))
+			})
+
+			It("should configure the S3 endpoint settings", func() {
+				Expect(container.Env).To(ContainElements(
+					corev1.EnvVar{
+						Name:  "AWS_ENDPOINT",
+						Value: "minio.example.com",
+					},
+					corev1.EnvVar{
+						Name:  "AWS_ENDPOINT_PROTO",
+						Value: "https",
+					},
+				))
+			})
+
+			It("should configure the S3 storage class", func() {
+				Expect(container.Env).To(ContainElement(
+					corev1.EnvVar{
+						Name:  "AWS_STORAGE_CLASS",
+						Value: "STANDARD",
+					},
+				))
+			})
+
+			Context("when using IAM role authentication", func() {
+				BeforeEach(func() {
+					s3Destination.Spec.S3.AccessKeyID = nil
+					s3Destination.Spec.S3.SecretAccessKey = nil
+					s3Destination.Spec.S3.IAMRoleEndpoint = "http://169.254.169.254"
+					Expect(k8sClient.Update(ctx, s3Destination)).To(Succeed())
+
+					_, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: s3BackupPlanName})
+					Expect(err).NotTo(HaveOccurred())
+
+					cronJob := &batchv1.CronJob{}
+					err = k8sClient.Get(ctx, s3BackupPlanName, cronJob)
+					Expect(err).NotTo(HaveOccurred())
+
+					container = cronJob.Spec.JobTemplate.Spec.Template.Spec.Containers[0]
+				})
+
+				It("should configure the IAM role endpoint", func() {
+					Expect(container.Env).To(ContainElement(
+						corev1.EnvVar{
+							Name:  "AWS_IAM_ROLE_ENDPOINT",
+							Value: "http://169.254.169.254",
+						},
+					))
+				})
+
+				It("should not include AWS credentials", func() {
+					Expect(container.Env).NotTo(ContainElement(HaveField("Name", "AWS_ACCESS_KEY_ID")))
+					Expect(container.Env).NotTo(ContainElement(HaveField("Name", "AWS_SECRET_ACCESS_KEY")))
+				})
+			})
+
+			Context("when using insecure endpoints", func() {
+				BeforeEach(func() {
+					s3Destination.Spec.S3.EndpointProtocol = "https"
+					s3Destination.Spec.S3.EndpointInsecure = true
+					s3Destination.Spec.S3.EndpointCACert = "-----BEGIN CERTIFICATE-----\nMIIE...\n-----END CERTIFICATE-----"
+					Expect(k8sClient.Update(ctx, s3Destination)).To(Succeed())
+
+					_, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: s3BackupPlanName})
+					Expect(err).NotTo(HaveOccurred())
+
+					cronJob := &batchv1.CronJob{}
+					err = k8sClient.Get(ctx, s3BackupPlanName, cronJob)
+					Expect(err).NotTo(HaveOccurred())
+
+					container = cronJob.Spec.JobTemplate.Spec.Template.Spec.Containers[0]
+				})
+
+				It("should configure insecure endpoint settings only for HTTPS", func() {
+					Expect(container.Env).To(ContainElements(
+						corev1.EnvVar{
+							Name:  "AWS_ENDPOINT_PROTO",
+							Value: "https",
+						},
+						corev1.EnvVar{
+							Name:  "AWS_ENDPOINT_INSECURE",
+							Value: "true",
+						},
+						corev1.EnvVar{
+							Name:  "AWS_ENDPOINT_CA_CERT",
+							Value: "-----BEGIN CERTIFICATE-----\nMIIE...\n-----END CERTIFICATE-----",
+						},
+					))
+				})
+			})
+
+			Context("when using HTTP protocol", func() {
+				BeforeEach(func() {
+					s3Destination.Spec.S3.EndpointProtocol = "http"
+					s3Destination.Spec.S3.EndpointInsecure = true
+					Expect(k8sClient.Update(ctx, s3Destination)).To(Succeed())
+
+					_, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: s3BackupPlanName})
+					Expect(err).NotTo(HaveOccurred())
+
+					cronJob := &batchv1.CronJob{}
+					err = k8sClient.Get(ctx, s3BackupPlanName, cronJob)
+					Expect(err).NotTo(HaveOccurred())
+
+					container = cronJob.Spec.JobTemplate.Spec.Template.Spec.Containers[0]
+				})
+
+				It("should not set insecure flag for HTTP protocol", func() {
+					Expect(container.Env).To(ContainElement(
+						corev1.EnvVar{
+							Name:  "AWS_ENDPOINT_PROTO",
+							Value: "http",
+						},
+					))
+					Expect(container.Env).NotTo(ContainElement(HaveField("Name", "AWS_ENDPOINT_INSECURE")))
+				})
+			})
+
+			Context("when the server is deleted", func() {
+				BeforeEach(func() {
+					Expect(k8sClient.Delete(ctx, server)).To(Succeed())
+
+					_, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: s3BackupPlanName})
+					Expect(err).NotTo(HaveOccurred())
+				})
+
+				It("should delete the CronJob", func() {
+					cronJob := &batchv1.CronJob{}
+					err := k8sClient.Get(ctx, s3BackupPlanName, cronJob)
+					Expect(errors.IsNotFound(err)).To(BeTrue())
+				})
+			})
+
+			Context("when the destination is deleted", func() {
+				BeforeEach(func() {
+					Expect(k8sClient.Delete(ctx, s3Destination)).To(Succeed())
+
+					_, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: s3BackupPlanName})
+					Expect(err).NotTo(HaveOccurred())
+				})
+
+				It("should delete the CronJob", func() {
+					cronJob := &batchv1.CronJob{}
+					err := k8sClient.Get(ctx, s3BackupPlanName, cronJob)
+					Expect(errors.IsNotFound(err)).To(BeTrue())
+				})
+			})
+		})
 	})
 })
