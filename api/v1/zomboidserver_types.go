@@ -108,6 +108,14 @@ type ZomboidServerStatus struct {
 	// +optional
 	Settings *ZomboidSettings `json:"settings,omitempty"`
 
+	// Allowlist contains the server's current allowlist
+	// +optional
+	Allowlist *[]AllowlistUser `json:"allowlist,omitempty"`
+
+	// ConnectedPlayers contains the server's current connected players
+	// +optional
+	ConnectedPlayers *[]ConnectedPlayer `json:"connectedPlayers,omitempty"`
+
 	// Conditions represent the latest available observations of the ZomboidServer's current state.
 	// +optional
 	// +patchMergeKey=type
@@ -115,6 +123,25 @@ type ZomboidServerStatus struct {
 	// +listType=map
 	// +listMapKey=type
 	Conditions []metav1.Condition `json:"conditions," patchStrategy:"merge" patchMergeKey:"type"`
+}
+
+type AllowlistUser struct {
+	Username       string  `json:"username"`
+	ID             int     `json:"id"`
+	SteamID        *string `json:"steamid,omitempty"`
+	OwnerID        *string `json:"ownerid,omitempty"`
+	AccessLevel    string  `json:"accesslevel"`
+	DisplayName    *string `json:"displayName,omitempty"`
+	Admin          bool    `json:"admin"`
+	Moderator      bool    `json:"moderator"`
+	Banned         bool    `json:"banned"`
+	Priority       *int    `json:"priority,omitempty"`
+	World          string  `json:"world"`
+	LastConnection *string `json:"lastConnection,omitempty"`
+}
+
+type ConnectedPlayer struct {
+	Username string `json:"username"`
 }
 
 // Condition Types
@@ -130,11 +157,12 @@ const (
 	ReasonServerStarting = "ServerStarting"
 	ReasonServerReady    = "ServerReady"
 
-	ReasonInfrastructureReady = "InfrastructureReady"
-	ReasonMissingPVC          = "MissingPVC"
-	ReasonMissingDeployment   = "MissingDeployment"
-	ReasonMissingRCONService  = "MissingRCONService"
-	ReasonMissingGameService  = "MissingGameService"
+	ReasonInfrastructureReady  = "InfrastructureReady"
+	ReasonMissingPVC           = "MissingPVC"
+	ReasonMissingDeployment    = "MissingDeployment"
+	ReasonMissingRCONService   = "MissingRCONService"
+	ReasonMissingGameService   = "MissingGameService"
+	ReasonMissingSQLiteService = "MissingSQLiteService"
 )
 
 // +kubebuilder:object:root=true

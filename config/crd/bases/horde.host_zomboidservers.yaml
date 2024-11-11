@@ -272,6 +272,12 @@ spec:
                       AntiCheatProtectionType2:
                         default: true
                         type: boolean
+                      AntiCheatProtectionType2ThresholdMultiplier:
+                        default: 3
+                        description: Protection type threshold multipliers
+                        maximum: 10
+                        minimum: 1
+                        type: number
                       AntiCheatProtectionType3:
                         default: true
                         type: boolean
@@ -370,12 +376,6 @@ spec:
                         type: boolean
                       AntiCheatProtectionType24ThresholdMultiplier:
                         default: 6
-                        maximum: 10
-                        minimum: 1
-                        type: number
-                      AntiCheatProtectionType2ThresholdMultiplier:
-                        default: 3
-                        description: Protection type threshold multipliers
                         maximum: 10
                         minimum: 1
                         type: number
@@ -1013,6 +1013,44 @@ spec:
           status:
             description: ZomboidServerStatus defines the observed state of ZomboidServer.
             properties:
+              allowlist:
+                description: Allowlist contains the server's current allowlist
+                items:
+                  properties:
+                    accesslevel:
+                      type: string
+                    admin:
+                      type: boolean
+                    banned:
+                      type: boolean
+                    displayName:
+                      type: string
+                    id:
+                      type: integer
+                    lastConnection:
+                      type: string
+                    moderator:
+                      type: boolean
+                    ownerid:
+                      type: string
+                    priority:
+                      type: integer
+                    steamid:
+                      type: string
+                    username:
+                      type: string
+                    world:
+                      type: string
+                  required:
+                  - accesslevel
+                  - admin
+                  - banned
+                  - id
+                  - moderator
+                  - username
+                  - world
+                  type: object
+                type: array
               conditions:
                 description: Conditions represent the latest available observations
                   of the ZomboidServer's current state.
@@ -1074,6 +1112,17 @@ spec:
                 x-kubernetes-list-map-keys:
                 - type
                 x-kubernetes-list-type: map
+              connectedPlayers:
+                description: ConnectedPlayers contains the server's current connected
+                  players
+                items:
+                  properties:
+                    username:
+                      type: string
+                  required:
+                  - username
+                  type: object
+                type: array
               ready:
                 description: Ready indicates whether the server is ready to accept
                   players
