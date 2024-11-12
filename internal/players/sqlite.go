@@ -40,18 +40,14 @@ func GetAllowlist(hostname string, port int, serverName string) ([]zomboidv1.All
 		Results []struct {
 			ResultSet []struct {
 				ID             int         `json:"id"`
-				World          string      `json:"world"`
 				Username       string      `json:"username"`
-				Password       string      `json:"password"`
-				Admin          int         `json:"admin"`
-				Moderator      int         `json:"moderator"`
-				Banned         interface{} `json:"banned"`
-				Priority       *int        `json:"priority"`
-				LastConnection string      `json:"lastConnection"`
 				SteamID        string      `json:"steamid"`
 				OwnerID        *string     `json:"ownerid"`
 				AccessLevel    string      `json:"accesslevel"`
 				DisplayName    *string     `json:"displayName"`
+				Banned         interface{} `json:"banned"`
+				Password       string      `json:"password"`
+				LastConnection string      `json:"lastConnection"`
 			} `json:"resultSet"`
 		} `json:"results"`
 	}
@@ -65,16 +61,13 @@ func GetAllowlist(hostname string, port int, serverName string) ([]zomboidv1.All
 		for _, user := range response.Results[0].ResultSet {
 			allowlist = append(allowlist, zomboidv1.AllowlistUser{
 				ID:             user.ID,
-				World:          user.World,
 				Username:       user.Username,
 				SteamID:        &user.SteamID,
 				OwnerID:        user.OwnerID,
 				AccessLevel:    user.AccessLevel,
 				DisplayName:    user.DisplayName,
-				Admin:          user.Admin == 1,
-				Moderator:      user.Moderator == 1,
 				Banned:         fmt.Sprint(user.Banned) == "true",
-				Priority:       user.Priority,
+				HashedPassword: user.Password,
 				LastConnection: &user.LastConnection,
 			})
 		}

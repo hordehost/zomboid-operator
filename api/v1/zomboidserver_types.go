@@ -23,6 +23,10 @@ type ZomboidServerSpec struct {
 	// Administrator defines the admin user credentials for the Zomboid server.
 	Administrator Administrator `json:"administrator"`
 
+	// Users is a list of users to add to the server
+	// +optional
+	Users []User `json:"users,omitempty"`
+
 	// Password is required for clients to join.
 	// +optional
 	Password *corev1.SecretKeySelector `json:"password,omitempty"`
@@ -125,6 +129,25 @@ type ZomboidServerStatus struct {
 	Conditions []metav1.Condition `json:"conditions," patchStrategy:"merge" patchMergeKey:"type"`
 }
 
+// User represents a user to add to the server
+type User struct {
+	// Username is the username of the user
+	Username string `json:"username"`
+
+	// Password is a reference to a secret key containing the user's password
+	Password *corev1.SecretKeySelector `json:"password"`
+
+	// AccessLevel is the access level of the user
+	// +kubebuilder:validation:Enum=Admin;Moderator;Overseer;GM;Observer
+	// +optional
+	AccessLevel string `json:"accesslevel,omitempty"`
+
+	// Banned indicates whether the user is banned from the server
+	// +optional
+	Banned bool `json:"banned,omitempty"`
+}
+
+// AllowlistUser represents the current state of a user on the server's allowlist
 type AllowlistUser struct {
 	Username       string  `json:"username"`
 	ID             int     `json:"id"`
@@ -132,11 +155,8 @@ type AllowlistUser struct {
 	OwnerID        *string `json:"ownerid,omitempty"`
 	AccessLevel    string  `json:"accesslevel"`
 	DisplayName    *string `json:"displayName,omitempty"`
-	Admin          bool    `json:"admin"`
-	Moderator      bool    `json:"moderator"`
 	Banned         bool    `json:"banned"`
-	Priority       *int    `json:"priority,omitempty"`
-	World          string  `json:"world"`
+	HashedPassword string  `json:"hashedPassword,omitempty"`
 	LastConnection *string `json:"lastConnection,omitempty"`
 }
 

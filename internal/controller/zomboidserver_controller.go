@@ -20,6 +20,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/gorcon/rcon"
 	zomboidv1 "github.com/hordehost/zomboid-operator/api/v1"
 	"github.com/hordehost/zomboid-operator/internal/players"
 	"github.com/hordehost/zomboid-operator/internal/settings"
@@ -142,7 +143,19 @@ func (r *ZomboidServerReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return r.status(ctx, zomboidServer, &ctrl.Result{RequeueAfter: 1 * time.Second}, nil)
 	}
 
-	result, err = r.observeCurrentAllowlist(ctx, zomboidServer)
+	// If we're not pointing to a real cluster (like in tests), we can't do anything else
+	if r.Config == nil {
+		return r.status(ctx, zomboidServer, &ctrl.Result{}, nil)
+	}
+
+	// Establish RCON connection for all subsequentoperations
+	conn, cleanup, err := r.connectRCON(ctx, zomboidServer)
+	if err != nil {
+		return r.status(ctx, zomboidServer, &ctrl.Result{}, err)
+	}
+	defer cleanup()
+
+	result, err = r.observeCurrentAllowlist(ctx, conn, zomboidServer)
 	if result != nil {
 		return r.status(ctx, zomboidServer, result, err)
 	}
@@ -150,7 +163,7 @@ func (r *ZomboidServerReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return r.status(ctx, zomboidServer, &ctrl.Result{}, err)
 	}
 
-	result, err = r.observeConnectedPlayers(ctx, zomboidServer)
+	result, err = r.reconcileUsers(ctx, conn, zomboidServer)
 	if result != nil {
 		return r.status(ctx, zomboidServer, result, err)
 	}
@@ -158,7 +171,7 @@ func (r *ZomboidServerReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return r.status(ctx, zomboidServer, &ctrl.Result{}, err)
 	}
 
-	result, err = r.observeCurrentSettings(ctx, zomboidServer)
+	result, err = r.observeConnectedPlayers(ctx, conn, zomboidServer)
 	if result != nil {
 		return r.status(ctx, zomboidServer, result, err)
 	}
@@ -166,7 +179,15 @@ func (r *ZomboidServerReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return r.status(ctx, zomboidServer, &ctrl.Result{}, err)
 	}
 
-	result, err = r.applyDesiredSettings(ctx, zomboidServer)
+	result, err = r.observeCurrentSettings(ctx, conn, zomboidServer)
+	if result != nil {
+		return r.status(ctx, zomboidServer, result, err)
+	}
+	if err != nil {
+		return r.status(ctx, zomboidServer, &ctrl.Result{}, err)
+	}
+
+	result, err = r.applyDesiredSettings(ctx, conn, zomboidServer)
 	if result != nil {
 		return r.status(ctx, zomboidServer, result, err)
 	}
@@ -196,28 +217,8 @@ func commonLabels(zomboidServer *zomboidv1.ZomboidServer) map[string]string {
 	}
 }
 
-func (r *ZomboidServerReconciler) getRCONPassword(ctx context.Context, zomboidServer *zomboidv1.ZomboidServer) (string, error) {
-	secret := &corev1.Secret{}
-	if err := r.Get(ctx, types.NamespacedName{
-		Name:      zomboidServer.Spec.Administrator.Password.LocalObjectReference.Name,
-		Namespace: zomboidServer.Namespace,
-	}, secret); err != nil {
-		return "", fmt.Errorf("failed to get RCON secret: %w", err)
-	}
-
-	password := string(secret.Data[zomboidServer.Spec.Administrator.Password.Key])
-	if password == "" {
-		return "", fmt.Errorf(
-			"RCON password not found in secret %s",
-			zomboidServer.Spec.Administrator.Password.LocalObjectReference.Name,
-		)
-	}
-
-	return password, nil
-}
-
-func (r *ZomboidServerReconciler) observeCurrentAllowlist(ctx context.Context, zomboidServer *zomboidv1.ZomboidServer) (*ctrl.Result, error) {
-	if zomboidServer == nil || r.Config == nil {
+func (r *ZomboidServerReconciler) observeCurrentAllowlist(ctx context.Context, conn *rcon.Conn, zomboidServer *zomboidv1.ZomboidServer) (*ctrl.Result, error) {
+	if zomboidServer == nil {
 		return nil, nil
 	}
 
@@ -240,28 +241,13 @@ func (r *ZomboidServerReconciler) observeCurrentAllowlist(ctx context.Context, z
 	return nil, nil
 }
 
-func (r *ZomboidServerReconciler) observeCurrentSettings(ctx context.Context, zomboidServer *zomboidv1.ZomboidServer) (*ctrl.Result, error) {
-	if zomboidServer == nil || r.Config == nil {
+func (r *ZomboidServerReconciler) observeCurrentSettings(ctx context.Context, conn *rcon.Conn, zomboidServer *zomboidv1.ZomboidServer) (*ctrl.Result, error) {
+	if zomboidServer == nil {
 		return nil, nil
 	}
 
-	password, err := r.getRCONPassword(ctx, zomboidServer)
-	if err != nil {
-		return nil, err
-	}
-
-	hostname, port, cleanup, err := r.getServiceEndpoint(ctx,
-		zomboidServer.Name+"-rcon",
-		zomboidServer.Namespace,
-		27015,
-	)
-	defer cleanup()
-	if err != nil {
-		return nil, err
-	}
-
 	observed := zomboidv1.ZomboidSettings{}
-	if err := settings.ReadServerOptions(hostname, port, password, &observed); err != nil {
+	if err := settings.ReadServerOptions(ctx, conn, &observed); err != nil {
 		return nil, err
 	}
 
@@ -270,27 +256,12 @@ func (r *ZomboidServerReconciler) observeCurrentSettings(ctx context.Context, zo
 	return nil, nil
 }
 
-func (r *ZomboidServerReconciler) observeConnectedPlayers(ctx context.Context, zomboidServer *zomboidv1.ZomboidServer) (*ctrl.Result, error) {
-	if zomboidServer == nil || r.Config == nil {
+func (r *ZomboidServerReconciler) observeConnectedPlayers(ctx context.Context, conn *rcon.Conn, zomboidServer *zomboidv1.ZomboidServer) (*ctrl.Result, error) {
+	if zomboidServer == nil {
 		return nil, nil
 	}
 
-	password, err := r.getRCONPassword(ctx, zomboidServer)
-	if err != nil {
-		return nil, err
-	}
-
-	hostname, port, cleanup, err := r.getServiceEndpoint(ctx,
-		zomboidServer.Name+"-rcon",
-		zomboidServer.Namespace,
-		27015,
-	)
-	defer cleanup()
-	if err != nil {
-		return nil, err
-	}
-
-	players, err := players.GetConnectedPlayers(ctx, hostname, port, password)
+	players, err := players.GetConnectedPlayers(ctx, conn)
 	if err != nil {
 		return nil, err
 	}
@@ -306,7 +277,7 @@ func (r *ZomboidServerReconciler) observeConnectedPlayers(ctx context.Context, z
 	return nil, nil
 }
 
-func (r *ZomboidServerReconciler) applyDesiredSettings(ctx context.Context, zomboidServer *zomboidv1.ZomboidServer) (*ctrl.Result, error) {
+func (r *ZomboidServerReconciler) applyDesiredSettings(ctx context.Context, conn *rcon.Conn, zomboidServer *zomboidv1.ZomboidServer) (*ctrl.Result, error) {
 	if zomboidServer == nil || zomboidServer.Status.Settings == nil {
 		return nil, nil
 	}
@@ -329,22 +300,7 @@ func (r *ZomboidServerReconciler) applyDesiredSettings(ctx context.Context, zomb
 		return nil, nil
 	}
 
-	password, err := r.getRCONPassword(ctx, zomboidServer)
-	if err != nil {
-		return nil, err
-	}
-
-	hostname, port, cleanup, err := r.getServiceEndpoint(ctx,
-		zomboidServer.Name+"-rcon",
-		zomboidServer.Namespace,
-		27015,
-	)
-	defer cleanup()
-	if err != nil {
-		return nil, err
-	}
-
-	if err := settings.ApplySettingsUpdates(ctx, hostname, port, password, updates, statusSettings); err != nil {
+	if err := settings.ApplySettingsUpdates(ctx, conn, updates, statusSettings); err != nil {
 		return nil, err
 	}
 
@@ -360,10 +316,103 @@ func (r *ZomboidServerReconciler) applyDesiredSettings(ctx context.Context, zomb
 	}
 
 	if needsRestart {
-		if err := settings.RestartServer(ctx, hostname, port, password); err != nil {
+		if err := settings.RestartServer(ctx, conn); err != nil {
 			return nil, fmt.Errorf("failed to restart server after mod changes: %w", err)
 		}
 		return &ctrl.Result{RequeueAfter: 30 * time.Second}, nil
+	}
+
+	return nil, nil
+}
+
+func (r *ZomboidServerReconciler) reconcileUsers(ctx context.Context, conn *rcon.Conn, zomboidServer *zomboidv1.ZomboidServer) (*ctrl.Result, error) {
+	if zomboidServer == nil || zomboidServer.Status.Allowlist == nil {
+		return nil, nil
+	}
+
+	currentUsers := make(map[string]zomboidv1.AllowlistUser)
+	for _, user := range *zomboidServer.Status.Allowlist {
+		currentUsers[user.Username] = user
+	}
+
+	desiredUsers := zomboidServer.Spec.Users[:]
+
+	// Add the administrator to the desired users to make sure they
+	// are always present and unbanned.
+	desiredUsers = append(desiredUsers, zomboidv1.User{
+		Username:    zomboidServer.Spec.Administrator.Username,
+		Password:    &zomboidServer.Spec.Administrator.Password,
+		AccessLevel: "admin",
+		Banned:      false,
+	})
+
+	for _, desiredUser := range desiredUsers {
+		current, exists := currentUsers[desiredUser.Username]
+
+		// If user doesn't exist, add them
+		if !exists {
+			if desiredUser.Password == nil {
+				return nil, fmt.Errorf("password is required for user %s", desiredUser.Username)
+			}
+
+			// Get user password from secret
+			userSecret := &corev1.Secret{}
+			if err := r.Get(ctx, types.NamespacedName{
+				Name:      desiredUser.Password.LocalObjectReference.Name,
+				Namespace: zomboidServer.Namespace,
+			}, userSecret); err != nil {
+				return nil, fmt.Errorf("failed to get user secret for %s: %w", desiredUser.Username, err)
+			}
+
+			userPassword := string(userSecret.Data[desiredUser.Password.Key])
+			if userPassword == "" {
+				return nil, fmt.Errorf("password not found in secret for user %s", desiredUser.Username)
+			}
+
+			if err := players.AddUser(ctx, conn, desiredUser.Username, userPassword); err != nil {
+				return nil, fmt.Errorf("failed to add user %s: %w", desiredUser.Username, err)
+			}
+		}
+
+		// Set access level if specified and different
+		if desiredUser.AccessLevel != "" && (!exists || current.AccessLevel != desiredUser.AccessLevel) {
+			if err := players.SetAccessLevel(ctx, conn, desiredUser.Username, desiredUser.AccessLevel); err != nil {
+				return nil, fmt.Errorf("failed to set access level for %s: %w", desiredUser.Username, err)
+			}
+		}
+
+		// Handle ban status if different
+		if exists && current.Banned != desiredUser.Banned {
+			if desiredUser.Banned {
+				if err := players.BanUser(ctx, conn, desiredUser.Username); err != nil {
+					return nil, fmt.Errorf("failed to ban user %s: %w", desiredUser.Username, err)
+				}
+			} else {
+				if err := players.UnbanUser(ctx, conn, desiredUser.Username); err != nil {
+					return nil, fmt.Errorf("failed to unban user %s: %w", desiredUser.Username, err)
+				}
+			}
+		}
+	}
+
+	// Remove unlisted users if server is not open
+	if zomboidServer.Spec.Settings.Player.Open != nil && !*zomboidServer.Spec.Settings.Player.Open {
+		desiredUsers := make(map[string]struct{})
+		for _, user := range zomboidServer.Spec.Users {
+			desiredUsers[user.Username] = struct{}{}
+		}
+
+		for username := range currentUsers {
+			if username == zomboidServer.Spec.Administrator.Username {
+				continue
+			}
+
+			if _, desired := desiredUsers[username]; !desired {
+				if err := players.RemoveUser(ctx, conn, username); err != nil {
+					return nil, fmt.Errorf("failed to remove user %s: %w", username, err)
+				}
+			}
+		}
 	}
 
 	return nil, nil
