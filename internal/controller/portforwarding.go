@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 
 	"golang.org/x/exp/rand"
@@ -17,6 +18,38 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 )
+
+func isRunningInCluster() bool {
+	// If running in a pod, this env var will be set
+	if os.Getenv("KUBERNETES_SERVICE_HOST") != "" {
+		return true
+	}
+
+	// Alternatively, check if the serviceaccount token exists
+	if _, err := os.Stat("/var/run/secrets/kubernetes.io/serviceaccount/token"); err == nil {
+		return true
+	}
+
+	return false
+}
+
+func (r *ZomboidServerReconciler) getServiceEndpoint(ctx context.Context, name, namespace string, port int) (string, int, func(), error) {
+	hostname := fmt.Sprintf("%s.%s.svc.cluster.local", name, namespace)
+	var cleanup func()
+
+	if !isRunningInCluster() {
+		parts := strings.Split(hostname, ".")
+		localPort, cleanupFn, err := SetupPortForwarder(ctx, r.Config, r.Client, parts[1], parts[0], port)
+		if err != nil {
+			return "", 0, cleanup, fmt.Errorf("failed to setup port forwarder: %w", err)
+		}
+		cleanup = cleanupFn
+		hostname = "localhost"
+		port = localPort
+	}
+
+	return hostname, port, cleanup, nil
+}
 
 func SetupPortForwarder(ctx context.Context, config *rest.Config, k8sClient client.Client, namespace string, serviceName string, targetPort int) (int, func(), error) {
 	roundTripper, upgrader, err := spdy.RoundTripperFor(config)

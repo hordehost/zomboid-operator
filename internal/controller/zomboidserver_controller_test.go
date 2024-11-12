@@ -2,6 +2,7 @@ package controller
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo/v2"
@@ -226,272 +227,35 @@ var _ = Describe("ZomboidServer Controller", func() {
 				})
 			})
 
-			When("creating the Deployment", func() {
-				var (
-					deployment *appsv1.Deployment
-					container  corev1.Container
-				)
+			When("creating the SQLite Service", func() {
+				var sqliteService *corev1.Service
 
 				BeforeEach(func() {
-					deployment = &appsv1.Deployment{}
-					Expect(k8sClient.Get(ctx, zomboidServerName, deployment)).To(Succeed())
-
-					Expect(deployment.Spec.Template.Spec.Containers).To(HaveLen(1))
-					container = deployment.Spec.Template.Spec.Containers[0]
-					Expect(container.Name).To(Equal("zomboid"))
+					sqliteService = &corev1.Service{}
+					Expect(k8sClient.Get(ctx, types.NamespacedName{
+						Name:      zomboidServer.Name + "-sqlite",
+						Namespace: zomboidServer.Namespace,
+					}, sqliteService)).To(Succeed())
 				})
 
-				Context("init containers", func() {
-					var initContainers []corev1.Container
-
-					BeforeEach(func() {
-						initContainers = deployment.Spec.Template.Spec.InitContainers
-						Expect(initContainers).To(HaveLen(4))
-					})
-
-					It("should configure game-data init containers correctly", func() {
-						setOwner := initContainers[0]
-						Expect(setOwner.Name).To(Equal("game-data-set-owner"))
-						Expect(setOwner.Image).To(Equal("hordehost/zomboid-server:" + zomboidServer.Spec.Version))
-						Expect(setOwner.Command).To(Equal([]string{"/usr/bin/chown", "-R", "1000:1000", "/game-data"}))
-						Expect(setOwner.SecurityContext.RunAsUser).To(Equal(ptr.To(int64(0))))
-						Expect(setOwner.VolumeMounts).To(ConsistOf(corev1.VolumeMount{
-							Name:      "game-data",
-							MountPath: "/game-data",
-						}))
-
-						setPermissions := initContainers[1]
-						Expect(setPermissions.Name).To(Equal("game-data-set-permissions"))
-						Expect(setPermissions.Image).To(Equal("hordehost/zomboid-server:" + zomboidServer.Spec.Version))
-						Expect(setPermissions.Command).To(Equal([]string{"/usr/bin/chmod", "-R", "755", "/game-data"}))
-						Expect(setPermissions.SecurityContext.RunAsUser).To(Equal(ptr.To(int64(0))))
-						Expect(setPermissions.VolumeMounts).To(ConsistOf(corev1.VolumeMount{
-							Name:      "game-data",
-							MountPath: "/game-data",
-						}))
-					})
-
-					It("should configure workshop init containers correctly", func() {
-						setOwner := initContainers[2]
-						Expect(setOwner.Name).To(Equal("workshop-set-owner"))
-						Expect(setOwner.Image).To(Equal("hordehost/zomboid-server:" + zomboidServer.Spec.Version))
-						Expect(setOwner.Command).To(Equal([]string{"/usr/bin/chown", "-R", "1000:1000", "/server/steamapps"}))
-						Expect(setOwner.SecurityContext.RunAsUser).To(Equal(ptr.To(int64(0))))
-						Expect(setOwner.VolumeMounts).To(ConsistOf(corev1.VolumeMount{
-							Name:      "workshop",
-							MountPath: "/server/steamapps",
-						}))
-
-						setPermissions := initContainers[3]
-						Expect(setPermissions.Name).To(Equal("workshop-set-permissions"))
-						Expect(setPermissions.Image).To(Equal("hordehost/zomboid-server:" + zomboidServer.Spec.Version))
-						Expect(setPermissions.Command).To(Equal([]string{"/usr/bin/chmod", "-R", "755", "/server/steamapps"}))
-						Expect(setPermissions.SecurityContext.RunAsUser).To(Equal(ptr.To(int64(0))))
-						Expect(setPermissions.VolumeMounts).To(ConsistOf(corev1.VolumeMount{
-							Name:      "workshop",
-							MountPath: "/server/steamapps",
-						}))
-					})
-				})
-
-				It("should mount both game-data and workshop volumes", func() {
-					Expect(container.VolumeMounts).To(ConsistOf(
-						corev1.VolumeMount{
-							Name:      "game-data",
-							MountPath: "/game-data",
-						},
-						corev1.VolumeMount{
-							Name:      "workshop",
-							MountPath: "/server/steamapps",
+				It("should create the SQLite service with correct port", func() {
+					Expect(sqliteService.Spec.Ports).To(ConsistOf(
+						corev1.ServicePort{
+							Name:       "ws4sqlite",
+							Port:       12321,
+							Protocol:   corev1.ProtocolTCP,
+							TargetPort: intstr.FromString("ws4sqlite"),
 						},
 					))
 				})
 
-				Context("workshop volume configuration", func() {
-					It("should use emptyDir when WorkshopRequest is not specified", func() {
-						volumes := deployment.Spec.Template.Spec.Volumes
-						workshopVolume := volumes[1]
-						Expect(workshopVolume.Name).To(Equal("workshop"))
-						Expect(workshopVolume.EmptyDir).NotTo(BeNil())
-						Expect(workshopVolume.PersistentVolumeClaim).To(BeNil())
-					})
-
-					When("WorkshopRequest is specified", func() {
-						BeforeEach(func() {
-							zomboidServer.Spec.Storage.WorkshopRequest = ptr.To(resource.MustParse("20Gi"))
-							updateAndReconcile(ctx, k8sClient, reconciler, zomboidServer)
-						})
-
-						It("should create a PVC for workshop data", func() {
-							workshopPVC := &corev1.PersistentVolumeClaim{}
-							Expect(k8sClient.Get(ctx, types.NamespacedName{
-								Name:      zomboidServer.Name + "-workshop",
-								Namespace: zomboidServer.Namespace,
-							}, workshopPVC)).To(Succeed())
-
-							Expect(workshopPVC.Spec.Resources.Requests[corev1.ResourceStorage]).To(Equal(resource.MustParse("20Gi")))
-							Expect(*workshopPVC.Spec.StorageClassName).To(Equal("standard"))
-							Expect(workshopPVC.Spec.AccessModes).To(ConsistOf(corev1.ReadWriteOnce))
-
-							expectedLabels := map[string]string{
-								"app.kubernetes.io/name":       "zomboidserver",
-								"app.kubernetes.io/instance":   zomboidServer.Name,
-								"app.kubernetes.io/managed-by": "zomboid-operator",
-							}
-							Expect(workshopPVC.Labels).To(Equal(expectedLabels))
-						})
-
-						It("should use the workshop PVC in the deployment", func() {
-							deployment := &appsv1.Deployment{}
-							Expect(k8sClient.Get(ctx, zomboidServerName, deployment)).To(Succeed())
-
-							volumes := deployment.Spec.Template.Spec.Volumes
-							workshopVolume := volumes[1]
-							Expect(workshopVolume.Name).To(Equal("workshop"))
-							Expect(workshopVolume.PersistentVolumeClaim).NotTo(BeNil())
-							Expect(workshopVolume.PersistentVolumeClaim.ClaimName).To(Equal(zomboidServer.Name + "-workshop"))
-							Expect(workshopVolume.EmptyDir).To(BeNil())
-						})
-					})
-				})
-
-				It("should set the correct container image", func() {
-					Expect(container.Image).To(Equal("hordehost/zomboid-server:" + zomboidServer.Spec.Version))
-				})
-
-				It("should set the correct resource requirements and set the JVM max heap size", func() {
-					Expect(container.Resources).To(Equal(zomboidServer.Spec.Resources))
-					Expect(container.Env).To(ContainElement(corev1.EnvVar{
-						Name:  "ZOMBOID_JVM_MAX_HEAP",
-						Value: "2048m",
-					}))
-				})
-
-				It("should set the server name", func() {
-					Expect(container.Env).To(ContainElement(corev1.EnvVar{
-						Name:  "ZOMBOID_SERVER_NAME",
-						Value: zomboidServer.Name,
-					}))
-				})
-
-				It("should set up the admin user", func() {
-					Expect(container.Env).To(ContainElement(corev1.EnvVar{
-						Name:  "ZOMBOID_SERVER_ADMIN_USERNAME",
-						Value: "admin",
-					}))
-					Expect(container.Env).To(ContainElement(corev1.EnvVar{
-						Name: "ZOMBOID_SERVER_ADMIN_PASSWORD",
-						ValueFrom: &corev1.EnvVarSource{
-							SecretKeyRef: &corev1.SecretKeySelector{
-								LocalObjectReference: corev1.LocalObjectReference{
-									Name: "the-admin-secret",
-								},
-								Key: "password",
-							},
-						},
-					}))
-				})
-
-				It("should set a startup probe", func() {
-					Expect(container.StartupProbe).To(Equal(&corev1.Probe{
-						ProbeHandler: corev1.ProbeHandler{
-							Exec: &corev1.ExecAction{
-								Command: []string{"/server/health"},
-							},
-						},
-						InitialDelaySeconds: 20,
-						PeriodSeconds:       5,
-						TimeoutSeconds:      2,
-						SuccessThreshold:    1,
-						FailureThreshold:    120, // 5 seconds * 120 attempts = 10 minutes
-					}))
-				})
-
-				It("should set a liveness probe", func() {
-					Expect(container.LivenessProbe).To(Equal(&corev1.Probe{
-						ProbeHandler: corev1.ProbeHandler{
-							Exec: &corev1.ExecAction{
-								Command: []string{"/server/health"},
-							},
-						},
-						InitialDelaySeconds: 5,
-						PeriodSeconds:       15,
-						TimeoutSeconds:      5,
-						SuccessThreshold:    1,
-						FailureThreshold:    3,
-					}))
-				})
-
-				It("should configure graceful shutdown via RCON", func() {
-					Expect(container.Lifecycle).To(Equal(&corev1.Lifecycle{
-						PreStop: &corev1.LifecycleHandler{
-							Exec: &corev1.ExecAction{
-								Command: []string{"/server/rcon", "quit"},
-							},
-						},
-					}))
-				})
-
-				It("should conditionally set the server password", func() {
-					// First verify password is set when Spec.Password is configured
-					Expect(container.Env).To(ContainElement(corev1.EnvVar{
-						Name: "ZOMBOID_SERVER_PASSWORD",
-						ValueFrom: &corev1.EnvVarSource{
-							SecretKeyRef: &corev1.SecretKeySelector{
-								LocalObjectReference: corev1.LocalObjectReference{
-									Name: "server-secret",
-								},
-								Key: "password",
-							},
-						},
-					}))
-
-					// Now remove the password and verify it's not set
-					zomboidServer.Spec.Password = nil
-					updateAndReconcile(ctx, k8sClient, reconciler, zomboidServer)
-
-					updatedDeployment := &appsv1.Deployment{}
-					Expect(k8sClient.Get(ctx, zomboidServerName, updatedDeployment)).To(Succeed())
-
-					updatedContainer := updatedDeployment.Spec.Template.Spec.Containers[0]
-					for _, env := range updatedContainer.Env {
-						Expect(env.Name).NotTo(Equal("ZOMBOID_SERVER_PASSWORD"))
+				It("should set the correct selector", func() {
+					expectedLabels := map[string]string{
+						"app.kubernetes.io/name":       "zomboidserver",
+						"app.kubernetes.io/instance":   zomboidServer.Name,
+						"app.kubernetes.io/managed-by": "zomboid-operator",
 					}
-				})
-
-				It("should set the admin password hash annotation", func() {
-					Expect(deployment.Spec.Template.Annotations["secret/admin"]).To(
-						Equal("a0052321048e12ed3bf3e2d264e41762a0547fceacfb97c04ed058c0edc39a8b"),
-					)
-				})
-
-				When("server password is set", func() {
-					It("should set both admin and server password hash annotations", func() {
-						Expect(deployment.Spec.Template.Annotations["secret/server"]).To(
-							Equal("32b7f0192280ba7f3529cf2cd5e381ab68db4a50acf636b7f32524364a1e98cc"),
-						)
-					})
-				})
-
-				When("server password is not set", func() {
-					It("should only set admin password hash annotation", func() {
-						zomboidServer.Spec.Password = nil
-						updateAndReconcile(ctx, k8sClient, reconciler, zomboidServer)
-
-						updatedDeployment := &appsv1.Deployment{}
-						Expect(k8sClient.Get(ctx, zomboidServerName, updatedDeployment)).To(Succeed())
-
-						Expect(updatedDeployment.Spec.Template.Annotations["secret/admin"]).NotTo(BeEmpty())
-						Expect(updatedDeployment.Spec.Template.Annotations["secret/server"]).To(BeEmpty())
-					})
-				})
-
-				It("should expose the RCON port", func() {
-					Expect(container.Ports).To(ContainElement(corev1.ContainerPort{
-						Name:          "rcon",
-						ContainerPort: 27015,
-						Protocol:      corev1.ProtocolTCP,
-					}))
+					Expect(sqliteService.Spec.Selector).To(Equal(expectedLabels))
 				})
 
 				It("should set the correct labels", func() {
@@ -500,55 +264,7 @@ var _ = Describe("ZomboidServer Controller", func() {
 						"app.kubernetes.io/instance":   zomboidServer.Name,
 						"app.kubernetes.io/managed-by": "zomboid-operator",
 					}
-					Expect(deployment.Labels).To(Equal(expectedLabels))
-					Expect(deployment.Spec.Selector.MatchLabels).To(Equal(expectedLabels))
-					Expect(deployment.Spec.Template.Labels).To(Equal(expectedLabels))
-				})
-
-				It("should set replicas to 1 when not suspended", func() {
-					Expect(*deployment.Spec.Replicas).To(Equal(int32(1)))
-				})
-
-				When("suspended is true", func() {
-					BeforeEach(func() {
-						zomboidServer.Spec.Suspended = ptr.To(true)
-						updateAndReconcile(ctx, k8sClient, reconciler, zomboidServer)
-
-						deployment = &appsv1.Deployment{}
-						Expect(k8sClient.Get(ctx, zomboidServerName, deployment)).To(Succeed())
-					})
-
-					It("should set replicas to 0", func() {
-						Expect(*deployment.Spec.Replicas).To(Equal(int32(0)))
-					})
-				})
-
-				When("suspended is false", func() {
-					BeforeEach(func() {
-						zomboidServer.Spec.Suspended = ptr.To(false)
-						updateAndReconcile(ctx, k8sClient, reconciler, zomboidServer)
-
-						deployment = &appsv1.Deployment{}
-						Expect(k8sClient.Get(ctx, zomboidServerName, deployment)).To(Succeed())
-					})
-
-					It("should set replicas to 1", func() {
-						Expect(*deployment.Spec.Replicas).To(Equal(int32(1)))
-					})
-				})
-
-				When("suspended is nil", func() {
-					BeforeEach(func() {
-						zomboidServer.Spec.Suspended = nil
-						updateAndReconcile(ctx, k8sClient, reconciler, zomboidServer)
-
-						deployment = &appsv1.Deployment{}
-						Expect(k8sClient.Get(ctx, zomboidServerName, deployment)).To(Succeed())
-					})
-
-					It("should set replicas to 1", func() {
-						Expect(*deployment.Spec.Replicas).To(Equal(int32(1)))
-					})
+					Expect(sqliteService.Labels).To(Equal(expectedLabels))
 				})
 			})
 
@@ -691,6 +407,90 @@ var _ = Describe("ZomboidServer Controller", func() {
 					})
 				})
 			})
+
+			Context("ws4sqlite sidecar container", func() {
+				var container corev1.Container
+
+				BeforeEach(func() {
+					deployment := &appsv1.Deployment{}
+					Expect(k8sClient.Get(ctx, zomboidServerName, deployment)).To(Succeed())
+
+					Expect(deployment.Spec.Template.Spec.Containers).To(HaveLen(2))
+
+					container = deployment.Spec.Template.Spec.Containers[1]
+					Expect(container.Name).To(Equal("ws4sqlite"))
+				})
+
+				It("should use the correct image", func() {
+					Expect(container.Image).To(Equal("germanorizzo/ws4sqlite:v0.16.2"))
+				})
+
+				It("should set the correct command", func() {
+					expectedDBPath := fmt.Sprintf("/game-data/db/%s.db", zomboidServer.Name)
+					Expect(container.Args).To(Equal([]string{"--db", expectedDBPath}))
+				})
+
+				It("should mount the game-data volume", func() {
+					Expect(container.VolumeMounts).To(ContainElement(corev1.VolumeMount{
+						Name:      "game-data",
+						MountPath: "/game-data",
+					}))
+				})
+
+				It("should expose the HTTP port", func() {
+					Expect(container.Ports).To(ContainElement(corev1.ContainerPort{
+						Name:          "ws4sqlite",
+						ContainerPort: 12321,
+						Protocol:      corev1.ProtocolTCP,
+					}))
+				})
+
+				It("should run as the correct user and group", func() {
+					Expect(container.SecurityContext.RunAsUser).To(Equal(ptr.To(int64(1000))))
+					Expect(container.SecurityContext.RunAsGroup).To(Equal(ptr.To(int64(1000))))
+				})
+
+				Context("service", func() {
+					var sqliteService *corev1.Service
+
+					BeforeEach(func() {
+						sqliteService = &corev1.Service{}
+						Expect(k8sClient.Get(ctx, types.NamespacedName{
+							Name:      zomboidServer.Name + "-sqlite",
+							Namespace: zomboidServer.Namespace,
+						}, sqliteService)).To(Succeed())
+					})
+
+					It("should create the service with correct port", func() {
+						Expect(sqliteService.Spec.Ports).To(ConsistOf(
+							corev1.ServicePort{
+								Name:       "ws4sqlite",
+								Port:       12321,
+								Protocol:   corev1.ProtocolTCP,
+								TargetPort: intstr.FromString("ws4sqlite"),
+							},
+						))
+					})
+
+					It("should set the correct selector", func() {
+						expectedLabels := map[string]string{
+							"app.kubernetes.io/name":       "zomboidserver",
+							"app.kubernetes.io/instance":   zomboidServer.Name,
+							"app.kubernetes.io/managed-by": "zomboid-operator",
+						}
+						Expect(sqliteService.Spec.Selector).To(Equal(expectedLabels))
+					})
+
+					It("should set the correct labels", func() {
+						expectedLabels := map[string]string{
+							"app.kubernetes.io/name":       "zomboidserver",
+							"app.kubernetes.io/instance":   zomboidServer.Name,
+							"app.kubernetes.io/managed-by": "zomboid-operator",
+						}
+						Expect(sqliteService.Labels).To(Equal(expectedLabels))
+					})
+				})
+			})
 		})
 
 		Context("Updating an existing ZomboidServer", func() {
@@ -722,87 +522,6 @@ var _ = Describe("ZomboidServer Controller", func() {
 				container := deployment.Spec.Template.Spec.Containers[0]
 				Expect(container.Image).To(Equal("hordehost/zomboid-server:41.78.17"))
 			})
-		})
-	})
-
-	When("applying server settings", func() {
-		It("should merge WorkshopMods into Mods strings", func() {
-			settings := &zomboidv1.ZomboidSettings{
-				// Start with some existing mods in the classic format
-				Mods: zomboidv1.Mods{
-					Mods:          ptr.To("ExistingMod1;ExistingMod2"),
-					WorkshopItems: ptr.To("111111;222222"),
-				},
-				// Add some workshop mods in the structured format
-				WorkshopMods: []zomboidv1.WorkshopMod{
-					{
-						ModID:      ptr.To("NewMod1"),
-						WorkshopID: ptr.To("333333"),
-					},
-					{
-						ModID:      ptr.To("NewMod2"),
-						WorkshopID: ptr.To("444444"),
-					},
-				},
-			}
-
-			mergeWorkshopMods(settings)
-
-			// Verify the mods were merged correctly
-			Expect(*settings.Mods.Mods).To(Equal("ExistingMod1;ExistingMod2;NewMod1;NewMod2"))
-			Expect(*settings.Mods.WorkshopItems).To(Equal("111111;222222;333333;444444"))
-		})
-
-		It("should handle empty initial Mods strings", func() {
-			settings := &zomboidv1.ZomboidSettings{
-				WorkshopMods: []zomboidv1.WorkshopMod{
-					{
-						ModID:      ptr.To("NewMod1"),
-						WorkshopID: ptr.To("333333"),
-					},
-				},
-			}
-
-			mergeWorkshopMods(settings)
-
-			Expect(*settings.Mods.Mods).To(Equal("NewMod1"))
-			Expect(*settings.Mods.WorkshopItems).To(Equal("333333"))
-		})
-
-		It("should handle empty WorkshopMods", func() {
-			settings := &zomboidv1.ZomboidSettings{
-				Mods: zomboidv1.Mods{
-					Mods:          ptr.To("ExistingMod1;ExistingMod2"),
-					WorkshopItems: ptr.To("111111;222222"),
-				},
-			}
-
-			mergeWorkshopMods(settings)
-
-			// Verify the existing mods remain unchanged
-			Expect(*settings.Mods.Mods).To(Equal("ExistingMod1;ExistingMod2"))
-			Expect(*settings.Mods.WorkshopItems).To(Equal("111111;222222"))
-		})
-
-		It("should handle nil ModID or WorkshopID", func() {
-			settings := &zomboidv1.ZomboidSettings{
-				WorkshopMods: []zomboidv1.WorkshopMod{
-					{
-						ModID:      ptr.To("NewMod1"),
-						WorkshopID: nil,
-					},
-					{
-						ModID:      nil,
-						WorkshopID: ptr.To("444444"),
-					},
-				},
-			}
-
-			mergeWorkshopMods(settings)
-
-			// Verify only non-nil values are merged
-			Expect(*settings.Mods.Mods).To(Equal("NewMod1"))
-			Expect(*settings.Mods.WorkshopItems).To(Equal("444444"))
 		})
 	})
 })

@@ -31,3 +31,23 @@ spec:
   password:
     name: zomboid-passwords
     key: server-password
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: zomboidserver-sample-game
+spec:
+  type: NodePort
+  selector:
+    app.kubernetes.io/instance: zomboidserver-sample
+    app.kubernetes.io/managed-by: zomboid-operator
+    app.kubernetes.io/name: zomboidserver
+  ports:
+    - name: steam
+      port: 16261
+      targetPort: 16261
+      protocol: UDP
+    - name: raknet
+      port: 16262
+      targetPort: 16262
+      protocol: UDP
