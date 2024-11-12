@@ -59,6 +59,10 @@ func (r *ZomboidServerReconciler) findZomboidServersForSecret(ctx context.Contex
 
 	var requests []reconcile.Request
 	for _, zs := range zomboidList.Items {
+		if zs.Namespace != secret.Namespace {
+			continue
+		}
+
 		request := reconcile.Request{
 			NamespacedName: types.NamespacedName{
 				Name:      zs.Name,
@@ -66,12 +70,43 @@ func (r *ZomboidServerReconciler) findZomboidServersForSecret(ctx context.Contex
 			},
 		}
 
-		if zs.Namespace == secret.Namespace &&
-			(zs.Spec.Administrator.Password.LocalObjectReference.Name == secret.Name ||
-				(zs.Spec.Password != nil && zs.Spec.Password.LocalObjectReference.Name == secret.Name)) {
+		// Check administrator password
+		if zs.Spec.Administrator.Password.LocalObjectReference.Name == secret.Name {
 			requests = append(requests, request)
+			continue
+		}
+
+		// Check server password if set
+		if zs.Spec.Password != nil && zs.Spec.Password.LocalObjectReference.Name == secret.Name {
+			requests = append(requests, request)
+			continue
+		}
+
+		// Check Discord token, channel and channel ID if set
+		if zs.Spec.Discord != nil {
+			if zs.Spec.Discord.DiscordToken != nil && zs.Spec.Discord.DiscordToken.LocalObjectReference.Name == secret.Name {
+				requests = append(requests, request)
+				continue
+			}
+			if zs.Spec.Discord.DiscordChannel != nil && zs.Spec.Discord.DiscordChannel.LocalObjectReference.Name == secret.Name {
+				requests = append(requests, request)
+				continue
+			}
+			if zs.Spec.Discord.DiscordChannelID != nil && zs.Spec.Discord.DiscordChannelID.LocalObjectReference.Name == secret.Name {
+				requests = append(requests, request)
+				continue
+			}
+		}
+
+		// Check user passwords
+		for _, user := range zs.Spec.Users {
+			if user.Password != nil && user.Password.LocalObjectReference.Name == secret.Name {
+				requests = append(requests, request)
+				break
+			}
 		}
 	}
+
 	return requests
 }
 
