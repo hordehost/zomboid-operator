@@ -491,6 +491,97 @@ var _ = Describe("ZomboidServer Controller", func() {
 					})
 				})
 			})
+
+			When("configuring pod annotations", func() {
+				var deployment *appsv1.Deployment
+
+				BeforeEach(func() {
+					// Create Discord secrets
+					discordTokenSecret := &corev1.Secret{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "discord-token-secret",
+							Namespace: zomboidServer.Namespace,
+						},
+						StringData: map[string]string{
+							"token": "discord-bot-token",
+						},
+					}
+					Expect(k8sClient.Create(ctx, discordTokenSecret)).To(Succeed())
+
+					discordChannelSecret := &corev1.Secret{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "discord-channel-secret",
+							Namespace: zomboidServer.Namespace,
+						},
+						StringData: map[string]string{
+							"channel": "general",
+						},
+					}
+					Expect(k8sClient.Create(ctx, discordChannelSecret)).To(Succeed())
+
+					discordChannelIDSecret := &corev1.Secret{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "discord-channel-id-secret",
+							Namespace: zomboidServer.Namespace,
+						},
+						StringData: map[string]string{
+							"id": "123456789",
+						},
+					}
+					Expect(k8sClient.Create(ctx, discordChannelIDSecret)).To(Succeed())
+
+					zomboidServer.Spec.Discord = &zomboidv1.Discord{
+						DiscordToken: &corev1.SecretKeySelector{
+							LocalObjectReference: corev1.LocalObjectReference{
+								Name: discordTokenSecret.Name,
+							},
+							Key: "token",
+						},
+						DiscordChannel: &corev1.SecretKeySelector{
+							LocalObjectReference: corev1.LocalObjectReference{
+								Name: discordChannelSecret.Name,
+							},
+							Key: "channel",
+						},
+						DiscordChannelID: &corev1.SecretKeySelector{
+							LocalObjectReference: corev1.LocalObjectReference{
+								Name: discordChannelIDSecret.Name,
+							},
+							Key: "id",
+						},
+					}
+
+					updateAndReconcile(ctx, k8sClient, reconciler, zomboidServer)
+					deployment = &appsv1.Deployment{}
+					Expect(k8sClient.Get(ctx, zomboidServerName, deployment)).To(Succeed())
+				})
+
+				It("should set administrator password annotation", func() {
+					// SHA256 hash of "the-extremely-secure-password"
+					Expect(deployment.Spec.Template.Annotations["secret/administrator"]).
+						To(Equal("a0052321048e12ed3bf3e2d264e41762a0547fceacfb97c04ed058c0edc39a8b"))
+				})
+
+				It("should set server password annotation", func() {
+					// SHA256 hash of "server-password"
+					Expect(deployment.Spec.Template.Annotations["secret/server"]).
+						To(Equal("32b7f0192280ba7f3529cf2cd5e381ab68db4a50acf636b7f32524364a1e98cc"))
+				})
+
+				It("should set discord-related annotations", func() {
+					// SHA256 hash of "discord-bot-token"
+					Expect(deployment.Spec.Template.Annotations["secret/discord-token"]).
+						To(Equal("60e3d0b333f8ad9775290958d8a68b74b3b55e3e355861a0753e52cf88d2ab9a"))
+
+					// SHA256 hash of "general"
+					Expect(deployment.Spec.Template.Annotations["secret/discord-channel"]).
+						To(Equal("0feae16d55365acf07fe9f909834361ba6ee606854746539230bdc84a6a24cee"))
+
+					// SHA256 hash of "123456789"
+					Expect(deployment.Spec.Template.Annotations["secret/discord-channel-id"]).
+						To(Equal("15e2b0d3c33891ebb0f1ef609ec419420c20e320ce94c65fbc8c3312448eb225"))
+				})
+			})
 		})
 
 		Context("Updating an existing ZomboidServer", func() {
