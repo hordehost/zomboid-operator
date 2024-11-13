@@ -272,6 +272,12 @@ spec:
                       AntiCheatProtectionType2:
                         default: true
                         type: boolean
+                      AntiCheatProtectionType2ThresholdMultiplier:
+                        default: 3
+                        description: Protection type threshold multipliers
+                        maximum: 10
+                        minimum: 1
+                        type: number
                       AntiCheatProtectionType3:
                         default: true
                         type: boolean
@@ -370,12 +376,6 @@ spec:
                         type: boolean
                       AntiCheatProtectionType24ThresholdMultiplier:
                         default: 6
-                        maximum: 10
-                        minimum: 1
-                        type: number
-                      AntiCheatProtectionType2ThresholdMultiplier:
-                        default: 3
-                        description: Protection type threshold multipliers
                         maximum: 10
                         minimum: 1
                         type: number
