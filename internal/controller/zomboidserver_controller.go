@@ -72,14 +72,18 @@ func (r *ZomboidServerReconciler) findZomboidServersForSecret(ctx context.Contex
 			},
 		}
 
+		logger := log.FromContext(ctx)
+
 		// Check administrator password
 		if zs.Spec.Administrator.Password.LocalObjectReference.Name == secret.Name {
+			logger.Info("requeueing to update administrator password", "name", zs.Name)
 			requests = append(requests, request)
 			continue
 		}
 
 		// Check server password if set
 		if zs.Spec.Password != nil && zs.Spec.Password.LocalObjectReference.Name == secret.Name {
+			logger.Info("requeueing to update server password", "name", zs.Name)
 			requests = append(requests, request)
 			continue
 		}
@@ -87,14 +91,17 @@ func (r *ZomboidServerReconciler) findZomboidServersForSecret(ctx context.Contex
 		// Check Discord token, channel and channel ID if set
 		if zs.Spec.Discord != nil {
 			if zs.Spec.Discord.DiscordToken != nil && zs.Spec.Discord.DiscordToken.LocalObjectReference.Name == secret.Name {
+				logger.Info("requeueing to update Discord token", "name", zs.Name)
 				requests = append(requests, request)
 				continue
 			}
 			if zs.Spec.Discord.DiscordChannel != nil && zs.Spec.Discord.DiscordChannel.LocalObjectReference.Name == secret.Name {
+				logger.Info("requeueing to update Discord channel", "name", zs.Name)
 				requests = append(requests, request)
 				continue
 			}
 			if zs.Spec.Discord.DiscordChannelID != nil && zs.Spec.Discord.DiscordChannelID.LocalObjectReference.Name == secret.Name {
+				logger.Info("requeueing to update Discord channel ID", "name", zs.Name)
 				requests = append(requests, request)
 				continue
 			}
@@ -103,6 +110,7 @@ func (r *ZomboidServerReconciler) findZomboidServersForSecret(ctx context.Contex
 		// Check user passwords
 		for _, user := range zs.Spec.Users {
 			if user.Password != nil && user.Password.LocalObjectReference.Name == secret.Name {
+				logger.Info("requeueing to update user password", "name", zs.Name)
 				requests = append(requests, request)
 				break
 			}
@@ -241,16 +249,16 @@ func (r *ZomboidServerReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 
 	// By default, requeue to poll for new setting updates
 	logger.Info("reconciled", "name", req.NamespacedName)
-	return r.status(ctx, zomboidServer, &ctrl.Result{}, nil)
+	return r.status(ctx, zomboidServer, &ctrl.Result{RequeueAfter: 10 * time.Second}, nil)
 }
 
 func (r *ZomboidServerReconciler) status(ctx context.Context, zomboidServer *zomboidv1.ZomboidServer, result *ctrl.Result, err error) (ctrl.Result, error) {
 	if statusErr := r.Status().Update(ctx, zomboidServer); statusErr != nil {
 		if errors.IsConflict(statusErr) {
-			logger := log.FromContext(ctx)
-			logger.Info("status update conflict, requeueing", "error", statusErr)
-			return ctrl.Result{RequeueAfter: 1 * time.Second}, nil
+			return ctrl.Result{Requeue: true}, nil
 		}
+		logger := log.FromContext(ctx)
+		logger.Info("unrecognized status update error", "error", statusErr)
 		return *result, statusErr
 	}
 	return *result, err
