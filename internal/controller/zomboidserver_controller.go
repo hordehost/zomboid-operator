@@ -14,9 +14,11 @@ import (
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -37,6 +39,14 @@ type ZomboidServerReconciler struct {
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *ZomboidServerReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	periodicSettingsRunner := &periodicSettingsRunner{
+		client:       r.Client,
+		eventChannel: make(chan event.GenericEvent),
+	}
+	if err := mgr.Add(periodicSettingsRunner); err != nil {
+		return err
+	}
+
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&zomboidv1.ZomboidServer{}).
 		Named("zomboidserver").
@@ -46,6 +56,9 @@ func (r *ZomboidServerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Watches(
 			&corev1.Secret{},
 			handler.EnqueueRequestsFromMapFunc(r.findZomboidServersForSecret),
+		).
+		WatchesRawSource(
+			source.Channel(periodicSettingsRunner.eventChannel, &handler.EnqueueRequestForObject{}),
 		).
 		Complete(r)
 }
@@ -118,6 +131,68 @@ func (r *ZomboidServerReconciler) findZomboidServersForSecret(ctx context.Contex
 	}
 
 	return requests
+}
+
+// periodicSettingsRunner is a controller-runtime Runnable that periodically
+// checks for ZomboidServers that need settings reconciliation
+// Inspired by https://dnaeon.github.io/kubernetes-periodic-controller/
+type periodicSettingsRunner struct {
+	client       client.Client
+	eventChannel chan event.GenericEvent
+}
+
+// Start implements the
+// [sigs.k8s.io/controller-runtime/pkg/manager.Runnable] interface.
+func (r *periodicSettingsRunner) Start(ctx context.Context) error {
+	logger := log.FromContext(ctx)
+	logger.Info("starting periodic settings runner")
+
+	ticker := time.NewTicker(5 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return nil
+		case <-ticker.C:
+			if err := r.checkServers(ctx); err != nil {
+				logger.Error(err, "failed to check servers")
+			}
+		}
+	}
+}
+
+// checkServers looks for ZomboidServers that need settings reconciliation
+func (r *periodicSettingsRunner) checkServers(ctx context.Context) error {
+	var servers zomboidv1.ZomboidServerList
+	if err := r.client.List(ctx, &servers); err != nil {
+		return err
+	}
+
+	now := time.Now()
+	for _, server := range servers.Items {
+		// Skip if last observed is nil or less than 10 seconds ago
+		if server.Status.SettingsLastObserved == nil {
+			continue
+		}
+
+		timeSinceLastObserved := now.Sub(server.Status.SettingsLastObserved.Time)
+		if timeSinceLastObserved < 10*time.Second {
+			continue
+		}
+
+		// Enqueue for reconciliation
+		r.eventChannel <- event.GenericEvent{
+			Object: &zomboidv1.ZomboidServer{
+				ObjectMeta: ctrl.ObjectMeta{
+					Name:      server.Name,
+					Namespace: server.Namespace,
+				},
+			},
+		}
+	}
+
+	return nil
 }
 
 // +kubebuilder:rbac:groups=horde.host,resources=zomboidservers,verbs=get;list;watch;create;update;patch;delete
@@ -249,7 +324,7 @@ func (r *ZomboidServerReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 
 	// By default, requeue to poll for new setting updates
 	logger.Info("reconciled", "name", req.NamespacedName)
-	return r.status(ctx, zomboidServer, &ctrl.Result{RequeueAfter: 10 * time.Second}, nil)
+	return r.status(ctx, zomboidServer, &ctrl.Result{}, nil)
 }
 
 func (r *ZomboidServerReconciler) status(ctx context.Context, zomboidServer *zomboidv1.ZomboidServer, result *ctrl.Result, err error) (ctrl.Result, error) {
