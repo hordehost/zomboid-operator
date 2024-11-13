@@ -114,11 +114,11 @@ type ZomboidServerStatus struct {
 
 	// Allowlist contains the server's current allowlist
 	// +optional
-	Allowlist *[]AllowlistUser `json:"allowlist,omitempty"`
+	Allowlist []AllowlistUser `json:"allowlist,omitempty"`
 
 	// ConnectedPlayers contains the server's current connected players
 	// +optional
-	ConnectedPlayers *[]ConnectedPlayer `json:"connectedPlayers,omitempty"`
+	ConnectedPlayers []ConnectedPlayer `json:"connectedPlayers,omitempty"`
 
 	// Conditions represent the latest available observations of the ZomboidServer's current state.
 	// +optional

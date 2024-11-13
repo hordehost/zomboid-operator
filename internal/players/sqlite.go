@@ -2,27 +2,45 @@ package players
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 
 	zomboidv1 "github.com/hordehost/zomboid-operator/api/v1"
+	"golang.org/x/crypto/bcrypt"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 )
+
+type sqliteRequest struct {
+	Transaction []sqliteStatement `json:"transaction"`
+}
+
+type sqliteStatement struct {
+	Query     string                 `json:"query,omitempty"`
+	Statement string                 `json:"statement,omitempty"`
+	Values    map[string]interface{} `json:"values,omitempty"`
+}
 
 // GetAllowlist queries the ws4sqlite service to retrieve the current allowlist
 func GetAllowlist(hostname string, port int, serverName string) ([]zomboidv1.AllowlistUser, error) {
 	sqliteUrl := fmt.Sprintf("http://%s:%d/%s", hostname, port, serverName)
-	queries, err := json.Marshal(map[string]interface{}{
-		"transaction": []map[string]string{
-			{"query": "SELECT * FROM whitelist"},
+
+	request := sqliteRequest{
+		Transaction: []sqliteStatement{
+			{
+				Query: "SELECT * FROM whitelist ORDER BY id ASC",
+			},
 		},
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal queries: %w", err)
 	}
 
-	resp, err := http.Post(sqliteUrl, "application/json", bytes.NewReader(queries))
+	requestBody, err := json.Marshal(request)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal request: %w", err)
+	}
+
+	resp, err := http.Post(sqliteUrl, "application/json", bytes.NewReader(requestBody))
 	if err != nil {
 		return nil, fmt.Errorf("failed to make HTTP request: %w", err)
 	}
@@ -67,11 +85,55 @@ func GetAllowlist(hostname string, port int, serverName string) ([]zomboidv1.All
 				AccessLevel:    user.AccessLevel,
 				DisplayName:    user.DisplayName,
 				Banned:         fmt.Sprint(user.Banned) == "true",
-				HashedPassword: user.Password,
 				LastConnection: &user.LastConnection,
 			})
 		}
 	}
 
 	return allowlist, nil
+}
+
+func SetPassword(ctx context.Context, hostname string, port int, serverName string, username string, password string) error {
+	sqliteUrl := fmt.Sprintf("http://%s:%d/%s", hostname, port, serverName)
+
+	bcryptHash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return fmt.Errorf("failed to hash password: %w", err)
+	}
+
+	request := sqliteRequest{
+		Transaction: []sqliteStatement{
+			{
+				Statement: "UPDATE whitelist SET password = :password WHERE username = :username",
+				Values: map[string]interface{}{
+					"password": string(bcryptHash),
+					"username": username,
+				},
+			},
+		},
+	}
+
+	requestBody, err := json.Marshal(request)
+	if err != nil {
+		return fmt.Errorf("failed to marshal request: %w", err)
+	}
+
+	logger := log.FromContext(ctx)
+	logger.Info("setting password for %s to %s", username, bcryptHash)
+
+	resp, err := http.Post(sqliteUrl, "application/json", bytes.NewReader(requestBody))
+	if err != nil {
+		return fmt.Errorf("failed to send request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return fmt.Errorf("received non-2xx response: %d, failed to read body: %w", resp.StatusCode, err)
+		}
+		return fmt.Errorf("received non-2xx response: %d, body: %s", resp.StatusCode, string(body))
+	}
+
+	return nil
 }

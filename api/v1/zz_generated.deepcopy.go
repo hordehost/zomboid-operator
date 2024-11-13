@@ -1440,23 +1440,15 @@ func (in *ZomboidServerStatus) DeepCopyInto(out *ZomboidServerStatus) {
 	}
 	if in.Allowlist != nil {
 		in, out := &in.Allowlist, &out.Allowlist
-		*out = new([]AllowlistUser)
-		if **in != nil {
-			in, out := *in, *out
-			*out = make([]AllowlistUser, len(*in))
-			for i := range *in {
-				(*in)[i].DeepCopyInto(&(*out)[i])
-			}
+		*out = make([]AllowlistUser, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
 	if in.ConnectedPlayers != nil {
 		in, out := &in.ConnectedPlayers, &out.ConnectedPlayers
-		*out = new([]ConnectedPlayer)
-		if **in != nil {
-			in, out := *in, *out
-			*out = make([]ConnectedPlayer, len(*in))
-			copy(*out, *in)
-		}
+		*out = make([]ConnectedPlayer, len(*in))
+		copy(*out, *in)
 	}
 	if in.Conditions != nil {
 		in, out := &in.Conditions, &out.Conditions

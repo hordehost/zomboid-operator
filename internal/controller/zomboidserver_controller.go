@@ -2,6 +2,7 @@ package controller
 
 import (
 	"context"
+	"crypto/sha256"
 	"fmt"
 	"time"
 
@@ -14,6 +15,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -124,6 +126,9 @@ func (r *ZomboidServerReconciler) findZomboidServersForSecret(ctx context.Contex
 func (r *ZomboidServerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	var err error
 
+	logger := log.FromContext(ctx)
+	logger.Info("reconciling", "name", req.NamespacedName)
+
 	zomboidServer := &zomboidv1.ZomboidServer{}
 	err = r.Get(ctx, req.NamespacedName, zomboidServer)
 	if err != nil {
@@ -183,35 +188,15 @@ func (r *ZomboidServerReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return r.status(ctx, zomboidServer, &ctrl.Result{}, nil)
 	}
 
-	// Establish RCON connection for all subsequentoperations
+	// Establish RCON connection for all subsequent operations
 	conn, cleanup, err := r.connectRCON(ctx, zomboidServer)
 	if err != nil {
 		return r.status(ctx, zomboidServer, &ctrl.Result{}, err)
 	}
 	defer cleanup()
 
-	result, err = r.observeCurrentAllowlist(ctx, conn, zomboidServer)
-	if result != nil {
-		return r.status(ctx, zomboidServer, result, err)
-	}
-	if err != nil {
-		return r.status(ctx, zomboidServer, &ctrl.Result{}, err)
-	}
-
-	result, err = r.reconcileUsers(ctx, conn, zomboidServer)
-	if result != nil {
-		return r.status(ctx, zomboidServer, result, err)
-	}
-	if err != nil {
-		return r.status(ctx, zomboidServer, &ctrl.Result{}, err)
-	}
-
-	result, err = r.observeConnectedPlayers(ctx, conn, zomboidServer)
-	if result != nil {
-		return r.status(ctx, zomboidServer, result, err)
-	}
-	if err != nil {
-		return r.status(ctx, zomboidServer, &ctrl.Result{}, err)
+	if conn == nil {
+		logger.Info("no RCON connection, skipping reconciliation")
 	}
 
 	result, err = r.observeCurrentSettings(ctx, conn, zomboidServer)
@@ -230,14 +215,41 @@ func (r *ZomboidServerReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return r.status(ctx, zomboidServer, &ctrl.Result{}, err)
 	}
 
+	result, err = r.observeCurrentAllowlist(ctx, zomboidServer)
+	if result != nil {
+		return r.status(ctx, zomboidServer, result, err)
+	}
+	if err != nil {
+		return r.status(ctx, zomboidServer, &ctrl.Result{}, err)
+	}
+
+	result, err = r.observeConnectedPlayers(ctx, conn, zomboidServer)
+	if result != nil {
+		return r.status(ctx, zomboidServer, result, err)
+	}
+	if err != nil {
+		return r.status(ctx, zomboidServer, &ctrl.Result{}, err)
+	}
+
+	result, err = r.reconcileUsers(ctx, conn, zomboidServer)
+	if result != nil {
+		return r.status(ctx, zomboidServer, result, err)
+	}
+	if err != nil {
+		return r.status(ctx, zomboidServer, &ctrl.Result{}, err)
+	}
+
 	// By default, requeue to poll for new setting updates
-	return r.status(ctx, zomboidServer, &ctrl.Result{RequeueAfter: 15 * time.Second}, nil)
+	logger.Info("reconciled", "name", req.NamespacedName)
+	return r.status(ctx, zomboidServer, &ctrl.Result{}, nil)
 }
 
 func (r *ZomboidServerReconciler) status(ctx context.Context, zomboidServer *zomboidv1.ZomboidServer, result *ctrl.Result, err error) (ctrl.Result, error) {
 	if statusErr := r.Status().Update(ctx, zomboidServer); statusErr != nil {
 		if errors.IsConflict(statusErr) {
-			return ctrl.Result{Requeue: true}, nil
+			logger := log.FromContext(ctx)
+			logger.Info("status update conflict, requeueing", "error", statusErr)
+			return ctrl.Result{RequeueAfter: 1 * time.Second}, nil
 		}
 		return *result, statusErr
 	}
@@ -252,30 +264,6 @@ func commonLabels(zomboidServer *zomboidv1.ZomboidServer) map[string]string {
 	}
 }
 
-func (r *ZomboidServerReconciler) observeCurrentAllowlist(ctx context.Context, conn *rcon.Conn, zomboidServer *zomboidv1.ZomboidServer) (*ctrl.Result, error) {
-	if zomboidServer == nil {
-		return nil, nil
-	}
-
-	hostname, port, cleanup, err := r.getServiceEndpoint(ctx,
-		zomboidServer.Name+"-sqlite",
-		zomboidServer.Namespace,
-		12321,
-	)
-	defer cleanup()
-	if err != nil {
-		return nil, err
-	}
-
-	allowlist, err := players.GetAllowlist(hostname, port, zomboidServer.Name)
-	if err != nil {
-		return nil, err
-	}
-
-	zomboidServer.Status.Allowlist = &allowlist
-	return nil, nil
-}
-
 func (r *ZomboidServerReconciler) observeCurrentSettings(ctx context.Context, conn *rcon.Conn, zomboidServer *zomboidv1.ZomboidServer) (*ctrl.Result, error) {
 	if zomboidServer == nil {
 		return nil, nil
@@ -288,27 +276,6 @@ func (r *ZomboidServerReconciler) observeCurrentSettings(ctx context.Context, co
 
 	zomboidServer.Status.Settings = &observed
 	zomboidServer.Status.SettingsLastObserved = &metav1.Time{Time: time.Now()}
-	return nil, nil
-}
-
-func (r *ZomboidServerReconciler) observeConnectedPlayers(ctx context.Context, conn *rcon.Conn, zomboidServer *zomboidv1.ZomboidServer) (*ctrl.Result, error) {
-	if zomboidServer == nil {
-		return nil, nil
-	}
-
-	players, err := players.GetConnectedPlayers(ctx, conn)
-	if err != nil {
-		return nil, err
-	}
-
-	connectedPlayers := make([]zomboidv1.ConnectedPlayer, len(players))
-	for i, username := range players {
-		connectedPlayers[i] = zomboidv1.ConnectedPlayer{
-			Username: username,
-		}
-	}
-
-	zomboidServer.Status.ConnectedPlayers = &connectedPlayers
 	return nil, nil
 }
 
@@ -360,14 +327,63 @@ func (r *ZomboidServerReconciler) applyDesiredSettings(ctx context.Context, conn
 	return nil, nil
 }
 
-func (r *ZomboidServerReconciler) reconcileUsers(ctx context.Context, conn *rcon.Conn, zomboidServer *zomboidv1.ZomboidServer) (*ctrl.Result, error) {
-	if zomboidServer == nil || zomboidServer.Status.Allowlist == nil {
+func (r *ZomboidServerReconciler) observeCurrentAllowlist(ctx context.Context, zomboidServer *zomboidv1.ZomboidServer) (*ctrl.Result, error) {
+	if zomboidServer == nil {
 		return nil, nil
 	}
 
+	hostname, port, cleanup, err := r.getServiceEndpoint(ctx,
+		zomboidServer.Name+"-sqlite",
+		zomboidServer.Namespace,
+		12321,
+	)
+	defer cleanup()
+	if err != nil {
+		return nil, err
+	}
+
+	allowlist, err := players.GetAllowlist(hostname, port, zomboidServer.Name)
+	if err != nil {
+		return nil, err
+	}
+
+	// Create map of existing users to preserve hashed passwords
+	existingUsers := make(map[string]zomboidv1.AllowlistUser)
+	for _, user := range zomboidServer.Status.Allowlist {
+		existingUsers[user.Username] = user
+	}
+
+	// Merge new allowlist with existing hashed passwords
+	for i, user := range allowlist {
+		if existing, ok := existingUsers[user.Username]; ok {
+			allowlist[i].HashedPassword = existing.HashedPassword
+		}
+	}
+
+	zomboidServer.Status.Allowlist = allowlist
+
+	return nil, nil
+}
+
+func (r *ZomboidServerReconciler) reconcileUsers(ctx context.Context, conn *rcon.Conn, zomboidServer *zomboidv1.ZomboidServer) (*ctrl.Result, error) {
+	if zomboidServer == nil {
+		return nil, nil
+	}
+
+	hostname, port, cleanup, err := r.getServiceEndpoint(ctx,
+		zomboidServer.Name+"-sqlite",
+		zomboidServer.Namespace,
+		12321,
+	)
+	defer cleanup()
+	if err != nil {
+		return nil, err
+	}
+
 	currentUsers := make(map[string]zomboidv1.AllowlistUser)
-	for _, user := range *zomboidServer.Status.Allowlist {
-		currentUsers[user.Username] = user
+	for i := range zomboidServer.Status.Allowlist {
+		user := &zomboidServer.Status.Allowlist[i]
+		currentUsers[user.Username] = *user
 	}
 
 	desiredUsers := zomboidServer.Spec.Users[:]
@@ -384,39 +400,53 @@ func (r *ZomboidServerReconciler) reconcileUsers(ctx context.Context, conn *rcon
 	for _, desiredUser := range desiredUsers {
 		current, exists := currentUsers[desiredUser.Username]
 
-		// If user doesn't exist, add them
+		if desiredUser.Password == nil {
+			continue
+		}
+
+		userSecret := &corev1.Secret{}
+		if err := r.Get(ctx, types.NamespacedName{
+			Name:      desiredUser.Password.Name,
+			Namespace: zomboidServer.Namespace,
+		}, userSecret); err != nil {
+			return nil, fmt.Errorf("failed to get user secret for %s: %w", desiredUser.Username, err)
+		}
+
+		password := string(userSecret.Data[desiredUser.Password.Key])
+		hashedPassword := fmt.Sprintf("%x", sha256.Sum256([]byte(password)))
+
 		if !exists {
-			if desiredUser.Password == nil {
-				return nil, fmt.Errorf("password is required for user %s", desiredUser.Username)
+			current = zomboidv1.AllowlistUser{
+				Username:       desiredUser.Username,
+				HashedPassword: hashedPassword,
 			}
 
-			// Get user password from secret
-			userSecret := &corev1.Secret{}
-			if err := r.Get(ctx, types.NamespacedName{
-				Name:      desiredUser.Password.LocalObjectReference.Name,
-				Namespace: zomboidServer.Namespace,
-			}, userSecret); err != nil {
-				return nil, fmt.Errorf("failed to get user secret for %s: %w", desiredUser.Username, err)
-			}
-
-			userPassword := string(userSecret.Data[desiredUser.Password.Key])
-			if userPassword == "" {
-				return nil, fmt.Errorf("password not found in secret for user %s", desiredUser.Username)
-			}
-
-			if err := players.AddUser(ctx, conn, desiredUser.Username, userPassword); err != nil {
+			if err := players.AddUser(ctx, conn, desiredUser.Username, password); err != nil {
 				return nil, fmt.Errorf("failed to add user %s: %w", desiredUser.Username, err)
+			}
+
+			currentUsers[desiredUser.Username] = current
+			zomboidServer.Status.Allowlist = append(zomboidServer.Status.Allowlist, current)
+		} else {
+			if current.HashedPassword != hashedPassword {
+				if err := players.SetPassword(ctx, hostname, port, zomboidServer.Name, desiredUser.Username, password); err != nil {
+					return nil, fmt.Errorf("failed to set password for user %s: %w", desiredUser.Username, err)
+				}
+			}
+			for i := range zomboidServer.Status.Allowlist {
+				if zomboidServer.Status.Allowlist[i].Username == desiredUser.Username {
+					zomboidServer.Status.Allowlist[i].HashedPassword = hashedPassword
+					break
+				}
 			}
 		}
 
-		// Set access level if specified and different
 		if desiredUser.AccessLevel != "" && (!exists || current.AccessLevel != desiredUser.AccessLevel) {
 			if err := players.SetAccessLevel(ctx, conn, desiredUser.Username, desiredUser.AccessLevel); err != nil {
 				return nil, fmt.Errorf("failed to set access level for %s: %w", desiredUser.Username, err)
 			}
 		}
 
-		// Handle ban status if different
 		if exists && current.Banned != desiredUser.Banned {
 			if desiredUser.Banned {
 				if err := players.BanUser(ctx, conn, desiredUser.Username); err != nil {
@@ -430,25 +460,49 @@ func (r *ZomboidServerReconciler) reconcileUsers(ctx context.Context, conn *rcon
 		}
 	}
 
-	// Remove unlisted users if server is not open
-	if zomboidServer.Spec.Settings.Player.Open != nil && !*zomboidServer.Spec.Settings.Player.Open {
-		desiredUsers := make(map[string]struct{})
-		for _, user := range zomboidServer.Spec.Users {
-			desiredUsers[user.Username] = struct{}{}
+	// For open servers, we won't remove unlisted users, so we're done here
+	// The default is open
+	if zomboidServer.Spec.Settings.Player.Open == nil || *zomboidServer.Spec.Settings.Player.Open {
+		return nil, nil
+	}
+
+	desiredUsersMap := make(map[string]struct{})
+	for _, user := range zomboidServer.Spec.Users {
+		desiredUsersMap[user.Username] = struct{}{}
+	}
+
+	for username := range currentUsers {
+		if username == zomboidServer.Spec.Administrator.Username {
+			continue
 		}
 
-		for username := range currentUsers {
-			if username == zomboidServer.Spec.Administrator.Username {
-				continue
-			}
-
-			if _, desired := desiredUsers[username]; !desired {
-				if err := players.RemoveUser(ctx, conn, username); err != nil {
-					return nil, fmt.Errorf("failed to remove user %s: %w", username, err)
-				}
+		if _, desired := desiredUsersMap[username]; !desired {
+			if err := players.RemoveUser(ctx, conn, username); err != nil {
+				return nil, fmt.Errorf("failed to remove user %s: %w", username, err)
 			}
 		}
 	}
 
+	return nil, nil
+}
+
+func (r *ZomboidServerReconciler) observeConnectedPlayers(ctx context.Context, conn *rcon.Conn, zomboidServer *zomboidv1.ZomboidServer) (*ctrl.Result, error) {
+	if zomboidServer == nil {
+		return nil, nil
+	}
+
+	players, err := players.GetConnectedPlayers(ctx, conn)
+	if err != nil {
+		return nil, err
+	}
+
+	connectedPlayers := make([]zomboidv1.ConnectedPlayer, len(players))
+	for i, username := range players {
+		connectedPlayers[i] = zomboidv1.ConnectedPlayer{
+			Username: username,
+		}
+	}
+
+	zomboidServer.Status.ConnectedPlayers = connectedPlayers
 	return nil, nil
 }
