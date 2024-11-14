@@ -35,7 +35,7 @@ func isRunningInCluster() bool {
 
 func (r *ZomboidServerReconciler) getServiceEndpoint(ctx context.Context, name, namespace string, port int) (string, int, func(), error) {
 	hostname := fmt.Sprintf("%s.%s.svc.cluster.local", name, namespace)
-	var cleanup func()
+	cleanup := func() {}
 
 	if !isRunningInCluster() {
 		parts := strings.Split(hostname, ".")
