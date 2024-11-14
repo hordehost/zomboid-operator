@@ -224,16 +224,6 @@ func (r *ZomboidServerReconciler) reconcileDeployment(ctx context.Context, zombo
 				Name:  "ZOMBOID_SERVER_NAME",
 				Value: zomboidServer.Name,
 			},
-			{
-				Name:  "ZOMBOID_SERVER_ADMIN_USERNAME",
-				Value: zomboidServer.Spec.Administrator.Username,
-			},
-			{
-				Name: "ZOMBOID_SERVER_ADMIN_PASSWORD",
-				ValueFrom: &corev1.EnvVarSource{
-					SecretKeyRef: &zomboidServer.Spec.Administrator.Password,
-				},
-			},
 			// The General log includes every connection and disconnection to
 			// the RCON server, which creates a lot of ongoing noise that also
 			// includes the admin password.  Unfortunately, we miss some of the
@@ -245,44 +235,7 @@ func (r *ZomboidServerReconciler) reconcileDeployment(ctx context.Context, zombo
 			},
 		}
 
-		if zomboidServer.Spec.Password != nil {
-			envVars = append(envVars, corev1.EnvVar{
-				Name: "ZOMBOID_SERVER_PASSWORD",
-				ValueFrom: &corev1.EnvVarSource{
-					SecretKeyRef: zomboidServer.Spec.Password,
-				},
-			})
-		}
-
-		// Add Discord environment variables if configured
-		if zomboidServer.Spec.Discord != nil {
-			if zomboidServer.Spec.Discord.DiscordToken != nil {
-				envVars = append(envVars, corev1.EnvVar{
-					Name: "ZOMBOID_DISCORD_TOKEN",
-					ValueFrom: &corev1.EnvVarSource{
-						SecretKeyRef: zomboidServer.Spec.Discord.DiscordToken,
-					},
-				})
-			}
-			if zomboidServer.Spec.Discord.DiscordChannel != nil {
-				envVars = append(envVars, corev1.EnvVar{
-					Name: "ZOMBOID_DISCORD_CHANNEL",
-					ValueFrom: &corev1.EnvVarSource{
-						SecretKeyRef: zomboidServer.Spec.Discord.DiscordChannel,
-					},
-				})
-			}
-			if zomboidServer.Spec.Discord.DiscordChannelID != nil {
-				envVars = append(envVars, corev1.EnvVar{
-					Name: "ZOMBOID_DISCORD_CHANNEL_ID",
-					ValueFrom: &corev1.EnvVarSource{
-						SecretKeyRef: zomboidServer.Spec.Discord.DiscordChannelID,
-					},
-				})
-			}
-		}
-
-		// Get admin password secret
+		// Admin credentials
 		adminSecret := &corev1.Secret{}
 		err := r.Get(ctx, client.ObjectKey{
 			Namespace: zomboidServer.Namespace,
@@ -293,12 +246,25 @@ func (r *ZomboidServerReconciler) reconcileDeployment(ctx context.Context, zombo
 		}
 		adminHash := sha256.Sum256(adminSecret.Data[zomboidServer.Spec.Administrator.Password.Key])
 
-		// Initialize annotations map
 		annotations := map[string]string{
-			"secret/admin": hex.EncodeToString(adminHash[:]),
+			"secret/administrator": hex.EncodeToString(adminHash[:]),
 		}
 
-		// Get server password secret if it exists
+		envVars = append(
+			envVars,
+			corev1.EnvVar{
+				Name:  "ZOMBOID_SERVER_ADMIN_USERNAME",
+				Value: zomboidServer.Spec.Administrator.Username,
+			},
+			corev1.EnvVar{
+				Name: "ZOMBOID_SERVER_ADMIN_PASSWORD",
+				ValueFrom: &corev1.EnvVarSource{
+					SecretKeyRef: &zomboidServer.Spec.Administrator.Password,
+				},
+			},
+		)
+
+		// Server password if configured
 		if zomboidServer.Spec.Password != nil {
 			serverSecret := &corev1.Secret{}
 			err := r.Get(ctx, client.ObjectKey{
@@ -310,6 +276,75 @@ func (r *ZomboidServerReconciler) reconcileDeployment(ctx context.Context, zombo
 			}
 			serverHash := sha256.Sum256(serverSecret.Data[zomboidServer.Spec.Password.Key])
 			annotations["secret/server"] = hex.EncodeToString(serverHash[:])
+
+			envVars = append(envVars, corev1.EnvVar{
+				Name: "ZOMBOID_SERVER_PASSWORD",
+				ValueFrom: &corev1.EnvVarSource{
+					SecretKeyRef: zomboidServer.Spec.Password,
+				},
+			})
+		}
+
+		if zomboidServer.Spec.Discord != nil {
+			if zomboidServer.Spec.Discord.DiscordToken != nil {
+				discordTokenSecret := &corev1.Secret{}
+				err := r.Get(ctx, client.ObjectKey{
+					Namespace: zomboidServer.Namespace,
+					Name:      zomboidServer.Spec.Discord.DiscordToken.Name,
+				}, discordTokenSecret)
+				if err != nil {
+					return fmt.Errorf("failed to get Discord token secret: %w", err)
+				}
+				discordTokenHash := sha256.Sum256(discordTokenSecret.Data[zomboidServer.Spec.Discord.DiscordToken.Key])
+				annotations["secret/discord-token"] = hex.EncodeToString(discordTokenHash[:])
+
+				envVars = append(envVars, corev1.EnvVar{
+					Name: "ZOMBOID_DISCORD_TOKEN",
+					ValueFrom: &corev1.EnvVarSource{
+						SecretKeyRef: zomboidServer.Spec.Discord.DiscordToken,
+					},
+				})
+			}
+
+			if zomboidServer.Spec.Discord.DiscordChannel != nil {
+				discordChannelSecret := &corev1.Secret{}
+				err := r.Get(ctx, client.ObjectKey{
+					Namespace: zomboidServer.Namespace,
+					Name:      zomboidServer.Spec.Discord.DiscordChannel.Name,
+				}, discordChannelSecret)
+				if err != nil {
+					return fmt.Errorf("failed to get Discord channel secret: %w", err)
+				}
+				discordChannelHash := sha256.Sum256(discordChannelSecret.Data[zomboidServer.Spec.Discord.DiscordChannel.Key])
+				annotations["secret/discord-channel"] = hex.EncodeToString(discordChannelHash[:])
+
+				envVars = append(envVars, corev1.EnvVar{
+					Name: "ZOMBOID_DISCORD_CHANNEL",
+					ValueFrom: &corev1.EnvVarSource{
+						SecretKeyRef: zomboidServer.Spec.Discord.DiscordChannel,
+					},
+				})
+			}
+
+			if zomboidServer.Spec.Discord.DiscordChannelID != nil {
+				discordChannelIDSecret := &corev1.Secret{}
+				err := r.Get(ctx, client.ObjectKey{
+					Namespace: zomboidServer.Namespace,
+					Name:      zomboidServer.Spec.Discord.DiscordChannelID.Name,
+				}, discordChannelIDSecret)
+				if err != nil {
+					return fmt.Errorf("failed to get Discord channel ID secret: %w", err)
+				}
+				discordChannelIDHash := sha256.Sum256(discordChannelIDSecret.Data[zomboidServer.Spec.Discord.DiscordChannelID.Key])
+				annotations["secret/discord-channel-id"] = hex.EncodeToString(discordChannelIDHash[:])
+
+				envVars = append(envVars, corev1.EnvVar{
+					Name: "ZOMBOID_DISCORD_CHANNEL_ID",
+					ValueFrom: &corev1.EnvVarSource{
+						SecretKeyRef: zomboidServer.Spec.Discord.DiscordChannelID,
+					},
+				})
+			}
 		}
 
 		image := fmt.Sprintf("hordehost/zomboid-server:%s", zomboidServer.Spec.Version)

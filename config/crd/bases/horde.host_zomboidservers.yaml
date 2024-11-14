@@ -1001,6 +1001,57 @@ spec:
                 description: Suspended indicates whether the server should be running.
                   If true, the server will be stopped.
                 type: boolean
+              users:
+                description: Users is a list of users to add to the server
+                items:
+                  description: User represents a user to add to the server
+                  properties:
+                    accesslevel:
+                      description: AccessLevel is the access level of the user
+                      enum:
+                      - Admin
+                      - Moderator
+                      - Overseer
+                      - GM
+                      - Observer
+                      type: string
+                    banned:
+                      description: Banned indicates whether the user is banned from
+                        the server
+                      type: boolean
+                    password:
+                      description: Password is a reference to a secret key containing
+                        the user's password
+                      properties:
+                        key:
+                          description: The key of the secret to select from.  Must
+                            be a valid secret key.
+                          type: string
+                        name:
+                          default: ""
+                          description: |-
+                            Name of the referent.
+                            This field is effectively required, but due to backwards compatibility is
+                            allowed to be empty. Instances of this type with an empty value here are
+                            almost certainly wrong.
+                            More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                          type: string
+                        optional:
+                          description: Specify whether the Secret or its key must
+                            be defined
+                          type: boolean
+                      required:
+                      - key
+                      type: object
+                      x-kubernetes-map-type: atomic
+                    username:
+                      description: Username is the username of the user
+                      type: string
+                  required:
+                  - password
+                  - username
+                  type: object
+                type: array
               version:
                 description: Version is the version of the Zomboid server to run.
                 type: string
@@ -1016,39 +1067,32 @@ spec:
               allowlist:
                 description: Allowlist contains the server's current allowlist
                 items:
+                  description: AllowlistUser represents the current state of a user
+                    on the server's allowlist
                   properties:
                     accesslevel:
                       type: string
-                    admin:
-                      type: boolean
                     banned:
                       type: boolean
                     displayName:
+                      type: string
+                    hashedPassword:
                       type: string
                     id:
                       type: integer
                     lastConnection:
                       type: string
-                    moderator:
-                      type: boolean
                     ownerid:
                       type: string
-                    priority:
-                      type: integer
                     steamid:
                       type: string
                     username:
                       type: string
-                    world:
-                      type: string
                   required:
                   - accesslevel
-                  - admin
                   - banned
                   - id
-                  - moderator
                   - username
-                  - world
                   type: object
                 type: array
               conditions:
@@ -1142,12 +1186,6 @@ spec:
                       AntiCheatProtectionType2:
                         default: true
                         type: boolean
-                      AntiCheatProtectionType2ThresholdMultiplier:
-                        default: 3
-                        description: Protection type threshold multipliers
-                        maximum: 10
-                        minimum: 1
-                        type: number
                       AntiCheatProtectionType3:
                         default: true
                         type: boolean
@@ -1246,6 +1284,12 @@ spec:
                         type: boolean
                       AntiCheatProtectionType24ThresholdMultiplier:
                         default: 6
+                        maximum: 10
+                        minimum: 1
+                        type: number
+                      AntiCheatProtectionType2ThresholdMultiplier:
+                        default: 3
+                        description: Protection type threshold multipliers
                         maximum: 10
                         minimum: 1
                         type: number
