@@ -37,6 +37,8 @@ type ZomboidServerReconciler struct {
 	Config *rest.Config
 }
 
+const settingsUpdateInterval = 10 * time.Second
+
 // SetupWithManager sets up the controller with the Manager.
 func (r *ZomboidServerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	periodicSettingsRunner := &periodicSettingsRunner{
@@ -147,7 +149,7 @@ func (r *periodicSettingsRunner) Start(ctx context.Context) error {
 	logger := log.FromContext(ctx)
 	logger.Info("starting periodic settings runner")
 
-	ticker := time.NewTicker(5 * time.Second)
+	ticker := time.NewTicker(settingsUpdateInterval / 2)
 	defer ticker.Stop()
 
 	for {
@@ -169,15 +171,13 @@ func (r *periodicSettingsRunner) checkServers(ctx context.Context) error {
 		return err
 	}
 
-	now := time.Now()
 	for _, server := range servers.Items {
 		// Skip if last observed is nil or less than 10 seconds ago
 		if server.Status.SettingsLastObserved == nil {
 			continue
 		}
 
-		timeSinceLastObserved := now.Sub(server.Status.SettingsLastObserved.Time)
-		if timeSinceLastObserved < 10*time.Second {
+		if time.Since(server.Status.SettingsLastObserved.Time) < settingsUpdateInterval {
 			continue
 		}
 
@@ -359,6 +359,7 @@ func (r *ZomboidServerReconciler) observeCurrentSettings(ctx context.Context, co
 
 	zomboidServer.Status.Settings = &observed
 	zomboidServer.Status.SettingsLastObserved = &metav1.Time{Time: time.Now()}
+
 	return nil, nil
 }
 
