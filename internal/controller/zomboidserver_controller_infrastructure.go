@@ -235,6 +235,27 @@ func (r *ZomboidServerReconciler) reconcileDeployment(ctx context.Context, zombo
 			},
 		}
 
+		serverPort := int32(16261)
+		if zomboidServer.Spec.ServerPort != nil {
+			serverPort = *zomboidServer.Spec.ServerPort
+		}
+
+		udpPort := int32(16262)
+		if zomboidServer.Spec.UDPPort != nil {
+			udpPort = *zomboidServer.Spec.UDPPort
+		}
+
+		envVars = append(envVars,
+			corev1.EnvVar{
+				Name:  "ZOMBOID_SERVER_PORT",
+				Value: fmt.Sprintf("%d", serverPort),
+			},
+			corev1.EnvVar{
+				Name:  "ZOMBOID_UDP_PORT",
+				Value: fmt.Sprintf("%d", udpPort),
+			},
+		)
+
 		// Admin credentials
 		adminSecret := &corev1.Secret{}
 		err := r.Get(ctx, client.ObjectKey{
@@ -544,12 +565,12 @@ func (r *ZomboidServerReconciler) reconcileDeployment(ctx context.Context, zombo
 								},
 								{
 									Name:          "steam",
-									ContainerPort: 16261,
+									ContainerPort: serverPort,
 									Protocol:      corev1.ProtocolUDP,
 								},
 								{
 									Name:          "raknet",
-									ContainerPort: 16262,
+									ContainerPort: udpPort,
 									Protocol:      corev1.ProtocolUDP,
 								},
 							},
@@ -656,18 +677,29 @@ func (r *ZomboidServerReconciler) reconcileGameService(ctx context.Context, zomb
 	_, err := controllerutil.CreateOrUpdate(ctx, r.Client, gameService, func() error {
 		labels := commonLabels(zomboidServer)
 		gameService.Labels = labels
+
+		serverPort := int32(16261)
+		if zomboidServer.Spec.ServerPort != nil {
+			serverPort = *zomboidServer.Spec.ServerPort
+		}
+
+		udpPort := int32(16262)
+		if zomboidServer.Spec.UDPPort != nil {
+			udpPort = *zomboidServer.Spec.UDPPort
+		}
+
 		gameService.Spec = corev1.ServiceSpec{
 			Selector: labels,
 			Ports: []corev1.ServicePort{
 				{
 					Name:       "steam",
-					Port:       16261,
+					Port:       serverPort,
 					Protocol:   corev1.ProtocolUDP,
 					TargetPort: intstr.FromString("steam"),
 				},
 				{
 					Name:       "raknet",
-					Port:       16262,
+					Port:       udpPort,
 					Protocol:   corev1.ProtocolUDP,
 					TargetPort: intstr.FromString("raknet"),
 				},

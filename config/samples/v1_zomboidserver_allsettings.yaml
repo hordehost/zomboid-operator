@@ -22,7 +22,7 @@ kind: ZomboidServer
 metadata:
   name: zomboidserver-with-all-settings
 spec:
-  version: "41.78.16-20241106121439"
+  version: "41.78.16-20241117211036"
   resources:
     requests:
       memory: "2Gi"

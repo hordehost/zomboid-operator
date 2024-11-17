@@ -582,6 +582,73 @@ var _ = Describe("ZomboidServer Controller", func() {
 						To(Equal("15e2b0d3c33891ebb0f1ef609ec419420c20e320ce94c65fbc8c3312448eb225"))
 				})
 			})
+
+			When("configuring custom ports", func() {
+				BeforeEach(func() {
+					zomboidServer.Spec.ServerPort = ptr.To(int32(26261))
+					zomboidServer.Spec.UDPPort = ptr.To(int32(26262))
+					updateAndReconcile(ctx, k8sClient, reconciler, zomboidServer)
+				})
+
+				It("should set the correct environment variables", func() {
+					deployment := &appsv1.Deployment{}
+					Expect(k8sClient.Get(ctx, zomboidServerName, deployment)).To(Succeed())
+
+					container := deployment.Spec.Template.Spec.Containers[0]
+					envVars := container.Env
+
+					Expect(envVars).To(ContainElement(corev1.EnvVar{
+						Name:  "ZOMBOID_SERVER_PORT",
+						Value: "26261",
+					}))
+					Expect(envVars).To(ContainElement(corev1.EnvVar{
+						Name:  "ZOMBOID_UDP_PORT",
+						Value: "26262",
+					}))
+				})
+
+				It("should configure the container ports correctly", func() {
+					deployment := &appsv1.Deployment{}
+					Expect(k8sClient.Get(ctx, zomboidServerName, deployment)).To(Succeed())
+
+					container := deployment.Spec.Template.Spec.Containers[0]
+					ports := container.Ports
+
+					Expect(ports).To(ContainElement(corev1.ContainerPort{
+						Name:          "steam",
+						ContainerPort: 26261,
+						Protocol:      corev1.ProtocolUDP,
+					}))
+					Expect(ports).To(ContainElement(corev1.ContainerPort{
+						Name:          "raknet",
+						ContainerPort: 26262,
+						Protocol:      corev1.ProtocolUDP,
+					}))
+				})
+
+				It("should configure the service ports correctly", func() {
+					service := &corev1.Service{}
+					Expect(k8sClient.Get(ctx, types.NamespacedName{
+						Name:      zomboidServer.Name,
+						Namespace: zomboidServer.Namespace,
+					}, service)).To(Succeed())
+
+					Expect(service.Spec.Ports).To(ContainElements(
+						corev1.ServicePort{
+							Name:       "steam",
+							Port:       26261,
+							Protocol:   corev1.ProtocolUDP,
+							TargetPort: intstr.FromString("steam"),
+						},
+						corev1.ServicePort{
+							Name:       "raknet",
+							Port:       26262,
+							Protocol:   corev1.ProtocolUDP,
+							TargetPort: intstr.FromString("raknet"),
+						},
+					))
+				})
+			})
 		})
 
 		Context("Updating an existing ZomboidServer", func() {
