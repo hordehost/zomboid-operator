@@ -12,7 +12,9 @@ kind: ZomboidServer
 metadata:
   name: zomboidserver-sample
 spec:
-  version: "41.78.16-20241106121439"
+  version: "41.78.16-20241117211036"
+  serverPort: 26261
+  udpPort: 26262
   resources:
     requests:
       memory: "2Gi"

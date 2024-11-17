@@ -258,6 +258,12 @@ spec:
                       More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
                     type: object
                 type: object
+              serverPort:
+                default: 16261
+                description: ServerPort is the port used for establishing connections
+                  to the server (UDP)
+                format: int32
+                type: integer
               settings:
                 description: Settings contains the server's current settings
                 properties:
@@ -1001,6 +1007,11 @@ spec:
                 description: Suspended indicates whether the server should be running.
                   If true, the server will be stopped.
                 type: boolean
+              udpPort:
+                default: 16262
+                description: UDPPort is the port used for game traffic (UDP)
+                format: int32
+                type: integer
               users:
                 description: Users is a list of users to add to the server
                 items:

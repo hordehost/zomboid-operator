@@ -11,6 +11,16 @@ type ZomboidServerSpec struct {
 	// Version is the version of the Zomboid server to run.
 	Version string `json:"version"`
 
+	// ServerPort is the port used for establishing connections to the server (UDP)
+	// +optional
+	// +kubebuilder:default=16261
+	ServerPort *int32 `json:"serverPort,omitempty"`
+
+	// UDPPort is the port used for game traffic (UDP)
+	// +optional
+	// +kubebuilder:default=16262
+	UDPPort *int32 `json:"udpPort,omitempty"`
+
 	// Resources defines the compute resources required by the Zomboid server.
 	Resources corev1.ResourceRequirements `json:"resources"`
 
