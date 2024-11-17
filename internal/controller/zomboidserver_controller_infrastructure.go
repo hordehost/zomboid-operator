@@ -215,10 +215,11 @@ func (r *ZomboidServerReconciler) reconcileDeployment(ctx context.Context, zombo
 		labels := commonLabels(zomboidServer)
 		deployment.Labels = labels
 
+		jvmHeapMB := int64(float64(zomboidServer.Spec.Resources.Limits.Memory().Value()) * 0.95 / (1024 * 1024))
 		envVars := []corev1.EnvVar{
 			{
 				Name:  "ZOMBOID_JVM_MAX_HEAP",
-				Value: fmt.Sprintf("%dm", zomboidServer.Spec.Resources.Limits.Memory().Value()/(1024*1024)),
+				Value: fmt.Sprintf("%dm", jvmHeapMB),
 			},
 			{
 				Name:  "ZOMBOID_SERVER_NAME",

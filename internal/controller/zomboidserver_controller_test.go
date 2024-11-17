@@ -680,6 +680,27 @@ var _ = Describe("ZomboidServer Controller", func() {
 				container := deployment.Spec.Template.Spec.Containers[0]
 				Expect(container.Image).To(Equal("hordehost/zomboid-server:41.78.17"))
 			})
+
+			It("should set JVM memory to 95% of container memory limit", func() {
+				zomboidServer.Spec.Resources.Limits[corev1.ResourceMemory] = resource.MustParse("4Gi")
+				zomboidServer.Spec.Resources.Requests[corev1.ResourceMemory] = resource.MustParse("4Gi")
+
+				updateAndReconcile(ctx, k8sClient, reconciler, zomboidServer)
+
+				deployment := &appsv1.Deployment{}
+				Expect(k8sClient.Get(ctx, zomboidServerName, deployment)).To(Succeed())
+
+				container := deployment.Spec.Template.Spec.Containers[0]
+				var jvmMemoryValue string
+				for _, env := range container.Env {
+					if env.Name == "ZOMBOID_JVM_MAX_HEAP" {
+						jvmMemoryValue = env.Value
+						break
+					}
+				}
+
+				Expect(jvmMemoryValue).To(Equal("3891m")) // 95% of 4Gi
+			})
 		})
 	})
 })
