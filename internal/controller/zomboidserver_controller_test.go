@@ -415,8 +415,7 @@ var _ = Describe("ZomboidServer Controller", func() {
 					deployment := &appsv1.Deployment{}
 					Expect(k8sClient.Get(ctx, zomboidServerName, deployment)).To(Succeed())
 
-					Expect(deployment.Spec.Template.Spec.Containers).To(HaveLen(2))
-
+					Expect(deployment.Spec.Template.Spec.Containers).To(HaveLen(3))
 					container = deployment.Spec.Template.Spec.Containers[1]
 					Expect(container.Name).To(Equal("ws4sqlite"))
 				})
@@ -489,6 +488,58 @@ var _ = Describe("ZomboidServer Controller", func() {
 						}
 						Expect(sqliteService.Labels).To(Equal(expectedLabels))
 					})
+				})
+			})
+
+			Context("metrics sidecar container", func() {
+				var container corev1.Container
+
+				BeforeEach(func() {
+					deployment := &appsv1.Deployment{}
+					Expect(k8sClient.Get(ctx, zomboidServerName, deployment)).To(Succeed())
+
+					Expect(deployment.Spec.Template.Spec.Containers).To(HaveLen(3))
+					container = deployment.Spec.Template.Spec.Containers[2]
+					Expect(container.Name).To(Equal("metrics"))
+				})
+
+				It("should use the operator image", func() {
+					// See suite_test.go for where this is set
+					Expect(container.Image).To(Equal("hordehost/zomboid-operator:a-really-real-version"))
+				})
+
+				It("should set the correct command", func() {
+					Expect(container.Command).To(Equal([]string{"/manager", "metrics"}))
+				})
+
+				It("should expose the metrics port", func() {
+					Expect(container.Ports).To(ConsistOf(
+						corev1.ContainerPort{
+							Name:          "metrics",
+							ContainerPort: 9090,
+							Protocol:      corev1.ProtocolTCP,
+						},
+					))
+				})
+
+				It("should configure required environment variables", func() {
+					Expect(container.Env).To(ConsistOf(
+						corev1.EnvVar{
+							Name:  "ZOMBOID_SERVER_NAME",
+							Value: zomboidServer.Name,
+						},
+						corev1.EnvVar{
+							Name: "RCON_PASSWORD",
+							ValueFrom: &corev1.EnvVarSource{
+								SecretKeyRef: &corev1.SecretKeySelector{
+									LocalObjectReference: corev1.LocalObjectReference{
+										Name: zomboidServer.Spec.Administrator.Password.Name,
+									},
+									Key: zomboidServer.Spec.Administrator.Password.Key,
+								},
+							},
+						},
+					))
 				})
 			})
 

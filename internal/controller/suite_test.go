@@ -3,6 +3,7 @@ package controller
 import (
 	"context"
 	"fmt"
+	"os"
 	"path/filepath"
 	"runtime"
 	"testing"
@@ -34,6 +35,8 @@ func TestControllers(t *testing.T) {
 }
 
 var _ = BeforeSuite(func() {
+	os.Setenv("OPERATOR_IMAGE", "hordehost/zomboid-operator:a-really-real-version")
+
 	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
 
 	ctx, cancel = context.WithCancel(context.TODO())

@@ -66,6 +66,11 @@ spec:
           image: controller:latest
           imagePullPolicy: IfNotPresent
           name: manager
+          env:
+            - name: OPERATOR_IMAGE
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.containers[0].image
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
