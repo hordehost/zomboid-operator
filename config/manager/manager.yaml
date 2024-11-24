@@ -68,9 +68,7 @@ spec:
           name: manager
           env:
             - name: OPERATOR_IMAGE
-              valueFrom:
-                fieldRef:
-                  fieldPath: spec.containers[0].image
+              value: controller:latest
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
