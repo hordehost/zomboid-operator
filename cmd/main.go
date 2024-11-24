@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"crypto/tls"
 	"flag"
 	"os"
@@ -23,6 +24,7 @@ import (
 	zomboidhordehostv1 "github.com/hordehost/zomboid-operator/api/v1"
 	zomboidv1 "github.com/hordehost/zomboid-operator/api/v1"
 	"github.com/hordehost/zomboid-operator/internal/controller"
+	"github.com/hordehost/zomboid-operator/internal/metrics"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -41,6 +43,16 @@ func init() {
 }
 
 func main() {
+	if len(os.Args) > 1 && os.Args[1] == "metrics" {
+		ctrl.SetLogger(zap.New())
+		server := metrics.NewServer()
+		if err := server.Run(context.Background()); err != nil {
+			setupLog.Error(err, "Failed to run metrics server")
+			os.Exit(1)
+		}
+		return
+	}
+
 	var metricsAddr string
 	var enableLeaderElection bool
 	var probeAddr string

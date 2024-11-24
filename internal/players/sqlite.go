@@ -137,3 +137,53 @@ func SetPassword(ctx context.Context, hostname string, port int, serverName stri
 
 	return nil
 }
+
+// GetAllowlistCount queries the ws4sqlite service to get the count of allowlisted players
+func GetAllowlistCount(hostname string, port int, serverName string) (int, error) {
+	sqliteUrl := fmt.Sprintf("http://%s:%d/%s", hostname, port, serverName)
+
+	request := sqliteRequest{
+		Transaction: []sqliteStatement{
+			{
+				Query: "SELECT COUNT(*) FROM whitelist",
+			},
+		},
+	}
+
+	requestBody, err := json.Marshal(request)
+	if err != nil {
+		return 0, fmt.Errorf("failed to marshal request: %w", err)
+	}
+
+	resp, err := http.Post(sqliteUrl, "application/json", bytes.NewReader(requestBody))
+	if err != nil {
+		return 0, fmt.Errorf("failed to make HTTP request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return 0, fmt.Errorf("received non-2xx response: %d, failed to read body: %w", resp.StatusCode, err)
+		}
+		return 0, fmt.Errorf("received non-2xx response: %d, body: %s", resp.StatusCode, string(body))
+	}
+
+	var response struct {
+		Results []struct {
+			ResultSet []struct {
+				Count int `json:"COUNT(*)"`
+			} `json:"resultSet"`
+		} `json:"results"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+		return 0, fmt.Errorf("failed to decode response: %w", err)
+	}
+
+	if len(response.Results) == 0 || len(response.Results[0].ResultSet) == 0 {
+		return 0, fmt.Errorf("invalid response format")
+	}
+
+	return response.Results[0].ResultSet[0].Count, nil
+}

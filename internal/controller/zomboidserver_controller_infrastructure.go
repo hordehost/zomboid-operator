@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"os"
 
 	zomboidv1 "github.com/hordehost/zomboid-operator/api/v1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -596,6 +597,34 @@ func (r *ZomboidServerReconciler) reconcileDeployment(ctx context.Context, zombo
 								{
 									Name:      "game-data",
 									MountPath: "/game-data",
+								},
+							},
+						},
+						{
+							Name:            "metrics",
+							Image:           os.Getenv("OPERATOR_IMAGE"),
+							ImagePullPolicy: corev1.PullIfNotPresent,
+							Command:         []string{"/manager", "metrics"},
+							Ports: []corev1.ContainerPort{{
+								Name:          "metrics",
+								ContainerPort: 9090,
+								Protocol:      corev1.ProtocolTCP,
+							}},
+							Env: []corev1.EnvVar{
+								{
+									Name:  "ZOMBOID_SERVER_NAME",
+									Value: zomboidServer.Name,
+								},
+								{
+									Name: "RCON_PASSWORD",
+									ValueFrom: &corev1.EnvVarSource{
+										SecretKeyRef: &corev1.SecretKeySelector{
+											LocalObjectReference: corev1.LocalObjectReference{
+												Name: zomboidServer.Spec.Administrator.Password.Name,
+											},
+											Key: zomboidServer.Spec.Administrator.Password.Key,
+										},
+									},
 								},
 							},
 						},
