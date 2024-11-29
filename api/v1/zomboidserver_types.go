@@ -145,7 +145,8 @@ type User struct {
 	Username string `json:"username"`
 
 	// Password is a reference to a secret key containing the user's password
-	Password *corev1.SecretKeySelector `json:"password"`
+	// +optional
+	Password *corev1.SecretKeySelector `json:"password,omitempty"`
 
 	// AccessLevel is the access level of the user
 	// +kubebuilder:validation:Enum=Admin;Moderator;Overseer;GM;Observer
