@@ -1059,7 +1059,6 @@ spec:
                       description: Username is the username of the user
                       type: string
                   required:
-                  - password
                   - username
                   type: object
                 type: array
