@@ -484,48 +484,47 @@ func (r *ZomboidServerReconciler) reconcileUsers(ctx context.Context, conn *rcon
 	for _, desiredUser := range desiredUsers {
 		current, exists := currentUsers[desiredUser.Username]
 
-		if desiredUser.Password == nil {
-			continue
-		}
-
-		userSecret := &corev1.Secret{}
-		if err := r.Get(ctx, types.NamespacedName{
-			Name:      desiredUser.Password.Name,
-			Namespace: zomboidServer.Namespace,
-		}, userSecret); err != nil {
-			return nil, fmt.Errorf("failed to get user secret for %s: %w", desiredUser.Username, err)
-		}
-
-		password := string(userSecret.Data[desiredUser.Password.Key])
-		hashedPassword := fmt.Sprintf("%x", sha256.Sum256([]byte(password)))
-
-		if !exists {
-			current = zomboidv1.AllowlistUser{
-				Username:       desiredUser.Username,
-				HashedPassword: hashedPassword,
+		// Only manage passwords if they are declared, otherwise we'll just let users manage their own
+		if desiredUser.Password != nil {
+			userSecret := &corev1.Secret{}
+			if err := r.Get(ctx, types.NamespacedName{
+				Name:      desiredUser.Password.Name,
+				Namespace: zomboidServer.Namespace,
+			}, userSecret); err != nil {
+				return nil, fmt.Errorf("failed to get user secret for %s: %w", desiredUser.Username, err)
 			}
 
-			if err := players.AddUser(ctx, conn, desiredUser.Username, password); err != nil {
-				return nil, fmt.Errorf("failed to add user %s: %w", desiredUser.Username, err)
-			}
+			password := string(userSecret.Data[desiredUser.Password.Key])
+			hashedPassword := fmt.Sprintf("%x", sha256.Sum256([]byte(password)))
 
-			currentUsers[desiredUser.Username] = current
-			zomboidServer.Status.Allowlist = append(zomboidServer.Status.Allowlist, current)
-		} else {
-			if current.HashedPassword != hashedPassword {
-				if err := players.SetPassword(ctx, hostname, port, zomboidServer.Name, desiredUser.Username, password); err != nil {
-					return nil, fmt.Errorf("failed to set password for user %s: %w", desiredUser.Username, err)
+			if !exists {
+				current = zomboidv1.AllowlistUser{
+					Username:       desiredUser.Username,
+					HashedPassword: hashedPassword,
+				}
+
+				if err := players.AddUser(ctx, conn, desiredUser.Username, password); err != nil {
+					return nil, fmt.Errorf("failed to add user %s: %w", desiredUser.Username, err)
+				}
+
+				currentUsers[desiredUser.Username] = current
+				zomboidServer.Status.Allowlist = append(zomboidServer.Status.Allowlist, current)
+			} else {
+				if current.HashedPassword != hashedPassword {
+					if err := players.SetPassword(ctx, hostname, port, zomboidServer.Name, desiredUser.Username, password); err != nil {
+						return nil, fmt.Errorf("failed to set password for user %s: %w", desiredUser.Username, err)
+					}
+				}
+				for i := range zomboidServer.Status.Allowlist {
+					if zomboidServer.Status.Allowlist[i].Username == desiredUser.Username {
+						zomboidServer.Status.Allowlist[i].HashedPassword = hashedPassword
+						break
+					}
 				}
 			}
-			for i := range zomboidServer.Status.Allowlist {
-				if zomboidServer.Status.Allowlist[i].Username == desiredUser.Username {
-					zomboidServer.Status.Allowlist[i].HashedPassword = hashedPassword
-					break
-				}
-			}
 		}
 
-		if desiredUser.AccessLevel != "" && (!exists || current.AccessLevel != desiredUser.AccessLevel) {
+		if exists && current.AccessLevel != desiredUser.AccessLevel {
 			if err := players.SetAccessLevel(ctx, conn, desiredUser.Username, desiredUser.AccessLevel); err != nil {
 				return nil, fmt.Errorf("failed to set access level for %s: %w", desiredUser.Username, err)
 			}

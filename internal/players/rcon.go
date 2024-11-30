@@ -55,6 +55,9 @@ func AddUser(ctx context.Context, conn *rcon.Conn, username, password string) er
 
 // SetAccessLevel sets the access level for a user
 func SetAccessLevel(ctx context.Context, conn *rcon.Conn, username, accessLevel string) error {
+	if accessLevel == "" {
+		accessLevel = "Player" // this is how we remove the access level to reset the user back to player
+	}
 	logger := log.FromContext(ctx)
 	cmd := fmt.Sprintf("setaccesslevel \"%s\" \"%s\"", username, accessLevel)
 	logger.Info("Executing RCON command", "command", cmd)
