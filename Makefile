@@ -76,7 +76,7 @@ build: tidy manifests generate fmt vet ## Build manager binary.
 
 .PHONY: run
 run: build manifests generate fmt vet ## Run a controller from your host.
-	go run ./cmd/main.go
+	OPERATOR_IMAGE=hordehost/zomboid-operator:latest go run ./cmd/main.go
 
 .PHONY: tidy
 tidy:
