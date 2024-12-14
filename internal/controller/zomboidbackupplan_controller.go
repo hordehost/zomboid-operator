@@ -108,11 +108,11 @@ func (r *ZomboidBackupPlanReconciler) findBackupPlansForDestination(ctx context.
 	return requests
 }
 
-// +kubebuilder:rbac:groups=horde.host,resources=zomboidbackupplans,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=horde.host,resources=zomboidbackupplans/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=horde.host,resources=zomboidbackupplans/finalizers,verbs=update
-// +kubebuilder:rbac:groups=horde.host,resources=zomboidservers,verbs=get;list;watch
-// +kubebuilder:rbac:groups=horde.host,resources=backupdestinations,verbs=get;list;watch
+// +kubebuilder:rbac:groups=zomboid.host,resources=zomboidbackupplans,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=zomboid.host,resources=zomboidbackupplans/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=zomboid.host,resources=zomboidbackupplans/finalizers,verbs=update
+// +kubebuilder:rbac:groups=zomboid.host,resources=zomboidservers,verbs=get;list;watch
+// +kubebuilder:rbac:groups=zomboid.host,resources=backupdestinations,verbs=get;list;watch
 // +kubebuilder:rbac:groups=batch,resources=cronjobs,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=[""],resources=secrets,verbs=get;list;watch;create;update;patch;delete
 

@@ -10,7 +10,7 @@ stringData:
   user2-password: "no it's me"
   bad-user-password: "i'm a griefer"
 ---
-apiVersion: horde.host/v1
+apiVersion: zomboid.host/v1
 kind: ZomboidServer
 metadata:
   name: zomboidserver-with-users

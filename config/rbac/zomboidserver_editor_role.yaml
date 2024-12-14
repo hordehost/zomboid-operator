@@ -8,7 +8,7 @@ metadata:
   name: zomboidserver-editor-role
 rules:
   - apiGroups:
-      - horde.host
+      - zomboid.host
     resources:
       - zomboidservers
     verbs:
@@ -20,7 +20,7 @@ rules:
       - update
       - watch
   - apiGroups:
-      - horde.host
+      - zomboid.host
     resources:
       - zomboidservers/status
     verbs:

@@ -8,7 +8,7 @@ metadata:
   name: ZomboidBackupPlan-editor-role
 rules:
   - apiGroups:
-      - horde.host
+      - zomboid.host
     resources:
       - zomboidbackupplans
     verbs:
@@ -20,7 +20,7 @@ rules:
       - update
       - watch
   - apiGroups:
-      - horde.host
+      - zomboid.host
     resources:
       - zomboidbackupplans/status
     verbs:

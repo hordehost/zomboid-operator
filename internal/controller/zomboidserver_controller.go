@@ -195,9 +195,9 @@ func (r *periodicSettingsRunner) checkServers(ctx context.Context) error {
 	return nil
 }
 
-// +kubebuilder:rbac:groups=horde.host,resources=zomboidservers,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=horde.host,resources=zomboidservers/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=horde.host,resources=zomboidservers/finalizers,verbs=update
+// +kubebuilder:rbac:groups=zomboid.host,resources=zomboidservers,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=zomboid.host,resources=zomboidservers/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=zomboid.host,resources=zomboidservers/finalizers,verbs=update
 
 // +kubebuilder:rbac:groups="",resources=services,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups="",resources=persistentvolumeclaims,verbs=get;list;watch;create;update;patch;delete

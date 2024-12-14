@@ -8,7 +8,7 @@ metadata:
   name: zomboidserver-viewer-role
 rules:
   - apiGroups:
-      - horde.host
+      - zomboid.host
     resources:
       - zomboidservers
     verbs:
@@ -16,7 +16,7 @@ rules:
       - list
       - watch
   - apiGroups:
-      - horde.host
+      - zomboid.host
     resources:
       - zomboidservers/status
     verbs:

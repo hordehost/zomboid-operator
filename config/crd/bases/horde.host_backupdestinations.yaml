@@ -4,9 +4,9 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.16.4
-  name: backupdestinations.horde.host
+  name: backupdestinations.zomboid.host
 spec:
-  group: horde.host
+  group: zomboid.host
   names:
     kind: BackupDestination
     listKind: BackupDestinationList
@@ -14,216 +14,226 @@ spec:
     singular: backupdestination
   scope: Namespaced
   versions:
-  - name: v1
-    schema:
-      openAPIV3Schema:
-        description: BackupDestination is the Schema for the backupdestinations API.
-        properties:
-          apiVersion:
-            description: |-
-              APIVersion defines the versioned schema of this representation of an object.
-              Servers should convert recognized schemas to the latest internal value, and
-              may reject unrecognized values.
-              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
-            type: string
-          kind:
-            description: |-
-              Kind is a string value representing the REST resource this object represents.
-              Servers may infer this from the endpoint the client submits requests to.
-              Cannot be updated.
-              In CamelCase.
-              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
-            type: string
-          metadata:
-            type: object
-          spec:
-            description: BackupDestinationSpec defines the desired state of BackupDestination.
-            properties:
-              dropbox:
-                description: Dropbox defines configuration for Dropbox storage.
-                properties:
-                  path:
-                    description: Path in Dropbox where files will be stored.
-                    type: string
-                  refreshToken:
-                    description: Token for Dropbox OAuth.
-                    properties:
-                      key:
-                        description: The key of the secret to select from.  Must be
-                          a valid secret key.
-                        type: string
-                      name:
-                        default: ""
-                        description: |-
-                          Name of the referent.
-                          This field is effectively required, but due to backwards compatibility is
-                          allowed to be empty. Instances of this type with an empty value here are
-                          almost certainly wrong.
-                          More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                        type: string
-                      optional:
-                        description: Specify whether the Secret or its key must be
-                          defined
-                        type: boolean
-                    required:
-                    - key
-                    type: object
-                    x-kubernetes-map-type: atomic
-                required:
-                - refreshToken
-                type: object
-              googleDrive:
-                description: GoogleDrive defines configuration for Google Drive storage.
-                properties:
-                  path:
-                    description: Path in Google Drive where files will be stored.
-                    type: string
-                  rootFolderId:
-                    description: |-
-                      RootFolderID is the ID of the root folder.
-                      Leave blank normally.
-                    type: string
-                  teamDriveId:
-                    description: TeamDriveID is the ID of the Shared Drive (Team Drive).
-                    type: string
-                  token:
-                    description: Token for Google Drive OAuth.
-                    properties:
-                      key:
-                        description: The key of the secret to select from.  Must be
-                          a valid secret key.
-                        type: string
-                      name:
-                        default: ""
-                        description: |-
-                          Name of the referent.
-                          This field is effectively required, but due to backwards compatibility is
-                          allowed to be empty. Instances of this type with an empty value here are
-                          almost certainly wrong.
-                          More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                        type: string
-                      optional:
-                        description: Specify whether the Secret or its key must be
-                          defined
-                        type: boolean
-                    required:
-                    - key
-                    type: object
-                    x-kubernetes-map-type: atomic
-                required:
-                - token
-                type: object
-              s3:
-                description: S3 defines configuration for S3-compatible storage providers.
-                properties:
-                  accessKeyId:
-                    description: AccessKeyID for authentication.
-                    properties:
-                      key:
-                        description: The key of the secret to select from.  Must be
-                          a valid secret key.
-                        type: string
-                      name:
-                        default: ""
-                        description: |-
-                          Name of the referent.
-                          This field is effectively required, but due to backwards compatibility is
-                          allowed to be empty. Instances of this type with an empty value here are
-                          almost certainly wrong.
-                          More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                        type: string
-                      optional:
-                        description: Specify whether the Secret or its key must be
-                          defined
-                        type: boolean
-                    required:
-                    - key
-                    type: object
-                    x-kubernetes-map-type: atomic
-                  bucketName:
-                    description: BucketName is the name of the bucket to use.
-                    type: string
-                  endpoint:
-                    description: |-
-                      Endpoint for S3 API.
-                      Leave blank if using AWS to use the default endpoint for the region.
-                    type: string
-                  path:
-                    description: Path within the bucket.
-                    type: string
-                  provider:
-                    description: Provider specifies which S3-compatible service to
-                      use.
-                    enum:
-                    - AWS
-                    - Alibaba
-                    - ArvanCloud
-                    - Ceph
-                    - ChinaMobile
-                    - Cloudflare
-                    - DigitalOcean
-                    - Dreamhost
-                    - HuaweiOBS
-                    - IBMCOS
-                    - IDrive
-                    - IONOS
-                    - Liara
-                    - Lyve
-                    - Minio
-                    - Netease
-                    - RackCorp
-                    - Scaleway
-                    - SeaweedFS
-                    - StackPath
-                    - Storj
-                    - TencentCOS
-                    - Wasabi
-                    - Other
-                    type: string
-                  region:
-                    description: Region to connect to.
-                    type: string
-                  secretAccessKey:
-                    description: SecretAccessKey for authentication.
-                    properties:
-                      key:
-                        description: The key of the secret to select from.  Must be
-                          a valid secret key.
-                        type: string
-                      name:
-                        default: ""
-                        description: |-
-                          Name of the referent.
-                          This field is effectively required, but due to backwards compatibility is
-                          allowed to be empty. Instances of this type with an empty value here are
-                          almost certainly wrong.
-                          More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                        type: string
-                      optional:
-                        description: Specify whether the Secret or its key must be
-                          defined
-                        type: boolean
-                    required:
-                    - key
-                    type: object
-                    x-kubernetes-map-type: atomic
-                  serverSideEncryption:
-                    description: ServerSideEncryption algorithm used when storing
-                      objects.
-                    type: string
-                  storageClass:
-                    description: StorageClass to use when storing objects.
-                    type: string
-                required:
-                - bucketName
-                - provider
-                type: object
-            type: object
-          status:
-            description: BackupDestinationStatus defines the observed state of BackupDestination.
-            type: object
-        type: object
-    served: true
-    storage: true
-    subresources:
-      status: {}
+    - name: v1
+      schema:
+        openAPIV3Schema:
+          description: BackupDestination is the Schema for the backupdestinations API.
+          properties:
+            apiVersion:
+              description: |-
+                APIVersion defines the versioned schema of this representation of an object.
+                Servers should convert recognized schemas to the latest internal value, and
+                may reject unrecognized values.
+                More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+              type: string
+            kind:
+              description: |-
+                Kind is a string value representing the REST resource this object represents.
+                Servers may infer this from the endpoint the client submits requests to.
+                Cannot be updated.
+                In CamelCase.
+                More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+              type: string
+            metadata:
+              type: object
+            spec:
+              description: BackupDestinationSpec defines the desired state of BackupDestination.
+              properties:
+                dropbox:
+                  description: Dropbox defines configuration for Dropbox storage.
+                  properties:
+                    path:
+                      description: Path in Dropbox where files will be stored.
+                      type: string
+                    refreshToken:
+                      description: Token for Dropbox OAuth.
+                      properties:
+                        key:
+                          description:
+                            The key of the secret to select from.  Must be
+                            a valid secret key.
+                          type: string
+                        name:
+                          default: ""
+                          description: |-
+                            Name of the referent.
+                            This field is effectively required, but due to backwards compatibility is
+                            allowed to be empty. Instances of this type with an empty value here are
+                            almost certainly wrong.
+                            More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                          type: string
+                        optional:
+                          description:
+                            Specify whether the Secret or its key must be
+                            defined
+                          type: boolean
+                      required:
+                        - key
+                      type: object
+                      x-kubernetes-map-type: atomic
+                  required:
+                    - refreshToken
+                  type: object
+                googleDrive:
+                  description: GoogleDrive defines configuration for Google Drive storage.
+                  properties:
+                    path:
+                      description: Path in Google Drive where files will be stored.
+                      type: string
+                    rootFolderId:
+                      description: |-
+                        RootFolderID is the ID of the root folder.
+                        Leave blank normally.
+                      type: string
+                    teamDriveId:
+                      description: TeamDriveID is the ID of the Shared Drive (Team Drive).
+                      type: string
+                    token:
+                      description: Token for Google Drive OAuth.
+                      properties:
+                        key:
+                          description:
+                            The key of the secret to select from.  Must be
+                            a valid secret key.
+                          type: string
+                        name:
+                          default: ""
+                          description: |-
+                            Name of the referent.
+                            This field is effectively required, but due to backwards compatibility is
+                            allowed to be empty. Instances of this type with an empty value here are
+                            almost certainly wrong.
+                            More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                          type: string
+                        optional:
+                          description:
+                            Specify whether the Secret or its key must be
+                            defined
+                          type: boolean
+                      required:
+                        - key
+                      type: object
+                      x-kubernetes-map-type: atomic
+                  required:
+                    - token
+                  type: object
+                s3:
+                  description: S3 defines configuration for S3-compatible storage providers.
+                  properties:
+                    accessKeyId:
+                      description: AccessKeyID for authentication.
+                      properties:
+                        key:
+                          description:
+                            The key of the secret to select from.  Must be
+                            a valid secret key.
+                          type: string
+                        name:
+                          default: ""
+                          description: |-
+                            Name of the referent.
+                            This field is effectively required, but due to backwards compatibility is
+                            allowed to be empty. Instances of this type with an empty value here are
+                            almost certainly wrong.
+                            More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                          type: string
+                        optional:
+                          description:
+                            Specify whether the Secret or its key must be
+                            defined
+                          type: boolean
+                      required:
+                        - key
+                      type: object
+                      x-kubernetes-map-type: atomic
+                    bucketName:
+                      description: BucketName is the name of the bucket to use.
+                      type: string
+                    endpoint:
+                      description: |-
+                        Endpoint for S3 API.
+                        Leave blank if using AWS to use the default endpoint for the region.
+                      type: string
+                    path:
+                      description: Path within the bucket.
+                      type: string
+                    provider:
+                      description:
+                        Provider specifies which S3-compatible service to
+                        use.
+                      enum:
+                        - AWS
+                        - Alibaba
+                        - ArvanCloud
+                        - Ceph
+                        - ChinaMobile
+                        - Cloudflare
+                        - DigitalOcean
+                        - Dreamhost
+                        - HuaweiOBS
+                        - IBMCOS
+                        - IDrive
+                        - IONOS
+                        - Liara
+                        - Lyve
+                        - Minio
+                        - Netease
+                        - RackCorp
+                        - Scaleway
+                        - SeaweedFS
+                        - StackPath
+                        - Storj
+                        - TencentCOS
+                        - Wasabi
+                        - Other
+                      type: string
+                    region:
+                      description: Region to connect to.
+                      type: string
+                    secretAccessKey:
+                      description: SecretAccessKey for authentication.
+                      properties:
+                        key:
+                          description:
+                            The key of the secret to select from.  Must be
+                            a valid secret key.
+                          type: string
+                        name:
+                          default: ""
+                          description: |-
+                            Name of the referent.
+                            This field is effectively required, but due to backwards compatibility is
+                            allowed to be empty. Instances of this type with an empty value here are
+                            almost certainly wrong.
+                            More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                          type: string
+                        optional:
+                          description:
+                            Specify whether the Secret or its key must be
+                            defined
+                          type: boolean
+                      required:
+                        - key
+                      type: object
+                      x-kubernetes-map-type: atomic
+                    serverSideEncryption:
+                      description:
+                        ServerSideEncryption algorithm used when storing
+                        objects.
+                      type: string
+                    storageClass:
+                      description: StorageClass to use when storing objects.
+                      type: string
+                  required:
+                    - bucketName
+                    - provider
+                  type: object
+              type: object
+            status:
+              description: BackupDestinationStatus defines the observed state of BackupDestination.
+              type: object
+          type: object
+      served: true
+      storage: true
+      subresources:
+        status: {}

@@ -7,7 +7,7 @@ stringData:
   admin-password: "tread with care"
   server-password: "let me in"
 ---
-apiVersion: horde.host/v1
+apiVersion: zomboid.host/v1
 kind: ZomboidServer
 metadata:
   name: zomboidserver-sample
