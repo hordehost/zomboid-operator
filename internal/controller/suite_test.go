@@ -18,8 +18,8 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	hordehostv1 "github.com/hordehost/zomboid-operator/api/v1"
-	zomboidv1 "github.com/hordehost/zomboid-operator/api/v1"
+	zomboidhostv1 "github.com/zomboidhost/zomboid-operator/api/v1"
+	zomboidv1 "github.com/zomboidhost/zomboid-operator/api/v1"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -35,7 +35,7 @@ func TestControllers(t *testing.T) {
 }
 
 var _ = BeforeSuite(func() {
-	os.Setenv("OPERATOR_IMAGE", "hordehost/zomboid-operator:a-really-real-version")
+	os.Setenv("OPERATOR_IMAGE", "zomboidhost/zomboid-operator:a-really-real-version")
 
 	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
 
@@ -61,7 +61,7 @@ var _ = BeforeSuite(func() {
 	err = zomboidv1.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 
-	err = hordehostv1.AddToScheme(scheme.Scheme)
+	err = zomboidhostv1.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 
 	// +kubebuilder:scaffold:scheme

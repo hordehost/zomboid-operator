@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/gorcon/rcon"
-	zomboidv1 "github.com/hordehost/zomboid-operator/api/v1"
+	zomboidv1 "github.com/zomboidhost/zomboid-operator/api/v1"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 

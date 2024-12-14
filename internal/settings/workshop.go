@@ -3,7 +3,7 @@ package settings
 import (
 	"strings"
 
-	zomboidv1 "github.com/hordehost/zomboid-operator/api/v1"
+	zomboidv1 "github.com/zomboidhost/zomboid-operator/api/v1"
 )
 
 func MergeWorkshopMods(settings *zomboidv1.ZomboidSettings) {

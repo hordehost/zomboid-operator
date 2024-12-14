@@ -18,7 +18,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	hordehostv1 "github.com/hordehost/zomboid-operator/api/v1"
+	zomboidhostv1 "github.com/zomboidhost/zomboid-operator/api/v1"
 )
 
 // ZomboidBackupPlanReconciler reconciles a ZomboidBackupPlan object
@@ -30,11 +30,11 @@ type ZomboidBackupPlanReconciler struct {
 // SetupWithManager sets up the controller with the Manager.
 func (r *ZomboidBackupPlanReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&hordehostv1.ZomboidBackupPlan{}).
+		For(&zomboidhostv1.ZomboidBackupPlan{}).
 		Owns(&batchv1.CronJob{}).
 		Watches(&corev1.Secret{}, handler.EnqueueRequestsFromMapFunc(r.findBackupPlansForGlobalSecret)).
-		Watches(&hordehostv1.ZomboidServer{}, handler.EnqueueRequestsFromMapFunc(r.findBackupPlansForServer)).
-		Watches(&hordehostv1.BackupDestination{}, handler.EnqueueRequestsFromMapFunc(r.findBackupPlansForDestination)).
+		Watches(&zomboidhostv1.ZomboidServer{}, handler.EnqueueRequestsFromMapFunc(r.findBackupPlansForServer)).
+		Watches(&zomboidhostv1.BackupDestination{}, handler.EnqueueRequestsFromMapFunc(r.findBackupPlansForDestination)).
 		Named("ZomboidBackupPlan").
 		Complete(r)
 }
@@ -47,7 +47,7 @@ func (r *ZomboidBackupPlanReconciler) findBackupPlansForGlobalSecret(ctx context
 		return nil
 	}
 
-	backupPlans := &hordehostv1.ZomboidBackupPlanList{}
+	backupPlans := &zomboidhostv1.ZomboidBackupPlanList{}
 	if err := r.List(ctx, backupPlans); err != nil {
 		return nil
 	}
@@ -65,9 +65,9 @@ func (r *ZomboidBackupPlanReconciler) findBackupPlansForGlobalSecret(ctx context
 }
 
 func (r *ZomboidBackupPlanReconciler) findBackupPlansForServer(ctx context.Context, obj client.Object) []reconcile.Request {
-	server := obj.(*hordehostv1.ZomboidServer)
+	server := obj.(*zomboidhostv1.ZomboidServer)
 
-	backupPlans := &hordehostv1.ZomboidBackupPlanList{}
+	backupPlans := &zomboidhostv1.ZomboidBackupPlanList{}
 	if err := r.List(ctx, backupPlans); err != nil {
 		return nil
 	}
@@ -87,9 +87,9 @@ func (r *ZomboidBackupPlanReconciler) findBackupPlansForServer(ctx context.Conte
 }
 
 func (r *ZomboidBackupPlanReconciler) findBackupPlansForDestination(ctx context.Context, obj client.Object) []reconcile.Request {
-	destination := obj.(*hordehostv1.BackupDestination)
+	destination := obj.(*zomboidhostv1.BackupDestination)
 
-	backupPlans := &hordehostv1.ZomboidBackupPlanList{}
+	backupPlans := &zomboidhostv1.ZomboidBackupPlanList{}
 	if err := r.List(ctx, backupPlans); err != nil {
 		return nil
 	}
@@ -117,7 +117,7 @@ func (r *ZomboidBackupPlanReconciler) findBackupPlansForDestination(ctx context.
 // +kubebuilder:rbac:groups=[""],resources=secrets,verbs=get;list;watch;create;update;patch;delete
 
 func (r *ZomboidBackupPlanReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	backupPlan := &hordehostv1.ZomboidBackupPlan{}
+	backupPlan := &zomboidhostv1.ZomboidBackupPlan{}
 	if err := r.Get(ctx, req.NamespacedName, backupPlan); err != nil {
 		if errors.IsNotFound(err) {
 			return ctrl.Result{}, nil
@@ -125,7 +125,7 @@ func (r *ZomboidBackupPlanReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		return ctrl.Result{}, fmt.Errorf("failed to get ZomboidBackupPlan: %w", err)
 	}
 
-	server := &hordehostv1.ZomboidServer{}
+	server := &zomboidhostv1.ZomboidServer{}
 	if err := r.Get(ctx, types.NamespacedName{
 		Name:      backupPlan.Spec.Server.Name,
 		Namespace: backupPlan.Namespace,
@@ -137,7 +137,7 @@ func (r *ZomboidBackupPlanReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		}
 	}
 
-	destination := &hordehostv1.BackupDestination{}
+	destination := &zomboidhostv1.BackupDestination{}
 	if err := r.Get(ctx, types.NamespacedName{
 		Name:      backupPlan.Spec.Destination.Name,
 		Namespace: backupPlan.Namespace,
@@ -164,14 +164,14 @@ func (r *ZomboidBackupPlanReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	return ctrl.Result{}, nil
 }
 
-func (r *ZomboidBackupPlanReconciler) setOwnerReferences(ctx context.Context, backupPlan *hordehostv1.ZomboidBackupPlan, server *hordehostv1.ZomboidServer, destination *hordehostv1.BackupDestination) error {
+func (r *ZomboidBackupPlanReconciler) setOwnerReferences(ctx context.Context, backupPlan *zomboidhostv1.ZomboidBackupPlan, server *zomboidhostv1.ZomboidServer, destination *zomboidhostv1.BackupDestination) error {
 	originalRefs := backupPlan.GetOwnerReferences()
 
 	ownerRefs := []metav1.OwnerReference{}
 
 	if server != nil {
 		ownerRefs = append(ownerRefs, metav1.OwnerReference{
-			APIVersion: hordehostv1.GroupVersion.String(),
+			APIVersion: zomboidhostv1.GroupVersion.String(),
 			Kind:       "ZomboidServer",
 			Name:       server.Name,
 			UID:        server.UID,
@@ -180,7 +180,7 @@ func (r *ZomboidBackupPlanReconciler) setOwnerReferences(ctx context.Context, ba
 
 	if destination != nil {
 		ownerRefs = append(ownerRefs, metav1.OwnerReference{
-			APIVersion: hordehostv1.GroupVersion.String(),
+			APIVersion: zomboidhostv1.GroupVersion.String(),
 			Kind:       "BackupDestination",
 			Name:       destination.Name,
 			UID:        destination.UID,
@@ -195,7 +195,7 @@ func (r *ZomboidBackupPlanReconciler) setOwnerReferences(ctx context.Context, ba
 	return nil
 }
 
-func (r *ZomboidBackupPlanReconciler) reconcileApplicationSecret(ctx context.Context, backupPlan *hordehostv1.ZomboidBackupPlan, server *hordehostv1.ZomboidServer, destination *hordehostv1.BackupDestination) error {
+func (r *ZomboidBackupPlanReconciler) reconcileApplicationSecret(ctx context.Context, backupPlan *zomboidhostv1.ZomboidBackupPlan, server *zomboidhostv1.ZomboidServer, destination *zomboidhostv1.BackupDestination) error {
 	type applicationSecret struct {
 		sourceName      string
 		sourceNamespace string
@@ -280,7 +280,7 @@ func (r *ZomboidBackupPlanReconciler) reconcileApplicationSecret(ctx context.Con
 	return err
 }
 
-func (r *ZomboidBackupPlanReconciler) reconcileCronJob(ctx context.Context, backupPlan *hordehostv1.ZomboidBackupPlan, server *hordehostv1.ZomboidServer, destination *hordehostv1.BackupDestination) error {
+func (r *ZomboidBackupPlanReconciler) reconcileCronJob(ctx context.Context, backupPlan *zomboidhostv1.ZomboidBackupPlan, server *zomboidhostv1.ZomboidServer, destination *zomboidhostv1.BackupDestination) error {
 	var err error
 
 	var env []corev1.EnvVar
@@ -375,7 +375,7 @@ func (r *ZomboidBackupPlanReconciler) reconcileCronJob(ctx context.Context, back
 	return err
 }
 
-func (r *ZomboidBackupPlanReconciler) dropboxConfiguration(dropbox hordehostv1.Dropbox, backupPlan *hordehostv1.ZomboidBackupPlan) ([]corev1.EnvVar, string) {
+func (r *ZomboidBackupPlanReconciler) dropboxConfiguration(dropbox zomboidhostv1.Dropbox, backupPlan *zomboidhostv1.ZomboidBackupPlan) ([]corev1.EnvVar, string) {
 	var remotePath string
 	if dropbox.Path != "" {
 		// Strip leading slash for app folder scoping
@@ -422,7 +422,7 @@ func (r *ZomboidBackupPlanReconciler) dropboxConfiguration(dropbox hordehostv1.D
 	return env, fmt.Sprintf("dropbox:%s", remotePath)
 }
 
-func (r *ZomboidBackupPlanReconciler) s3Configuration(s3 hordehostv1.S3) ([]corev1.EnvVar, string) {
+func (r *ZomboidBackupPlanReconciler) s3Configuration(s3 zomboidhostv1.S3) ([]corev1.EnvVar, string) {
 	env := []corev1.EnvVar{
 		{
 			Name:  "RCLONE_CONFIG_S3_TYPE",
@@ -488,7 +488,7 @@ func (r *ZomboidBackupPlanReconciler) s3Configuration(s3 hordehostv1.S3) ([]core
 	return env, fmt.Sprintf("s3:%s/%s", s3.BucketName, s3Path)
 }
 
-func (r *ZomboidBackupPlanReconciler) googleDriveConfiguration(googleDrive hordehostv1.GoogleDrive, backupPlan *hordehostv1.ZomboidBackupPlan) ([]corev1.EnvVar, string) {
+func (r *ZomboidBackupPlanReconciler) googleDriveConfiguration(googleDrive zomboidhostv1.GoogleDrive, backupPlan *zomboidhostv1.ZomboidBackupPlan) ([]corev1.EnvVar, string) {
 	var remotePath string
 	if googleDrive.Path != "" {
 		remotePath = strings.TrimPrefix(googleDrive.Path, "/")

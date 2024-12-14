@@ -15,7 +15,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	hordehostv1 "github.com/hordehost/zomboid-operator/api/v1"
+	zomboidhostv1 "github.com/zomboidhost/zomboid-operator/api/v1"
 )
 
 var _ = Describe("ZomboidBackupPlan Controller", func() {
@@ -23,7 +23,7 @@ var _ = Describe("ZomboidBackupPlan Controller", func() {
 		ctx               context.Context
 		reconciler        *ZomboidBackupPlanReconciler
 		namespace         string
-		server            *hordehostv1.ZomboidServer
+		server            *zomboidhostv1.ZomboidServer
 		operatorNS        *corev1.Namespace
 		applicationSecret *corev1.Secret
 	)
@@ -75,7 +75,7 @@ var _ = Describe("ZomboidBackupPlan Controller", func() {
 		}
 		Expect(k8sClient.Create(ctx, ns)).To(Succeed())
 
-		server = &hordehostv1.ZomboidServer{
+		server = &zomboidhostv1.ZomboidServer{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "test-server",
 				Namespace: namespace,
@@ -88,8 +88,8 @@ var _ = Describe("ZomboidBackupPlan Controller", func() {
 		When("using any type of destination", func() {
 			var (
 				backupPlanName types.NamespacedName
-				destination    *hordehostv1.BackupDestination
-				backupPlan     *hordehostv1.ZomboidBackupPlan
+				destination    *zomboidhostv1.BackupDestination
+				backupPlan     *zomboidhostv1.ZomboidBackupPlan
 				cronJob        *batchv1.CronJob
 				container      corev1.Container
 			)
@@ -113,13 +113,13 @@ var _ = Describe("ZomboidBackupPlan Controller", func() {
 				}
 				Expect(k8sClient.Create(ctx, s3Secret)).To(Succeed())
 
-				destination = &hordehostv1.BackupDestination{
+				destination = &zomboidhostv1.BackupDestination{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test-destination",
 						Namespace: namespace,
 					},
-					Spec: hordehostv1.BackupDestinationSpec{
-						S3: &hordehostv1.S3{
+					Spec: zomboidhostv1.BackupDestinationSpec{
+						S3: &zomboidhostv1.S3{
 							Provider:   "AWS",
 							BucketName: "test-bucket",
 							AccessKeyID: &corev1.SecretKeySelector{
@@ -139,12 +139,12 @@ var _ = Describe("ZomboidBackupPlan Controller", func() {
 				}
 				Expect(k8sClient.Create(ctx, destination)).To(Succeed())
 
-				backupPlan = &hordehostv1.ZomboidBackupPlan{
+				backupPlan = &zomboidhostv1.ZomboidBackupPlan{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      backupPlanName.Name,
 						Namespace: backupPlanName.Namespace,
 					},
-					Spec: hordehostv1.ZomboidBackupPlanSpec{
+					Spec: zomboidhostv1.ZomboidBackupPlanSpec{
 						Server: corev1.LocalObjectReference{
 							Name: server.Name,
 						},
@@ -315,8 +315,8 @@ var _ = Describe("ZomboidBackupPlan Controller", func() {
 		When("using a Dropbox destination", func() {
 			var (
 				dropboxBackupPlanName types.NamespacedName
-				dropboxDestination    *hordehostv1.BackupDestination
-				dropboxBackupPlan     *hordehostv1.ZomboidBackupPlan
+				dropboxDestination    *zomboidhostv1.BackupDestination
+				dropboxBackupPlan     *zomboidhostv1.ZomboidBackupPlan
 				dropboxSecret         *corev1.Secret
 				container             corev1.Container
 			)
@@ -338,13 +338,13 @@ var _ = Describe("ZomboidBackupPlan Controller", func() {
 				}
 				Expect(k8sClient.Create(ctx, dropboxSecret)).To(Succeed())
 
-				dropboxDestination = &hordehostv1.BackupDestination{
+				dropboxDestination = &zomboidhostv1.BackupDestination{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "dropbox-destination",
 						Namespace: namespace,
 					},
-					Spec: hordehostv1.BackupDestinationSpec{
-						Dropbox: &hordehostv1.Dropbox{
+					Spec: zomboidhostv1.BackupDestinationSpec{
+						Dropbox: &zomboidhostv1.Dropbox{
 							Token: corev1.SecretKeySelector{
 								LocalObjectReference: corev1.LocalObjectReference{
 									Name: dropboxSecret.Name,
@@ -356,12 +356,12 @@ var _ = Describe("ZomboidBackupPlan Controller", func() {
 				}
 				Expect(k8sClient.Create(ctx, dropboxDestination)).To(Succeed())
 
-				dropboxBackupPlan = &hordehostv1.ZomboidBackupPlan{
+				dropboxBackupPlan = &zomboidhostv1.ZomboidBackupPlan{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      dropboxBackupPlanName.Name,
 						Namespace: dropboxBackupPlanName.Namespace,
 					},
-					Spec: hordehostv1.ZomboidBackupPlanSpec{
+					Spec: zomboidhostv1.ZomboidBackupPlanSpec{
 						Server: corev1.LocalObjectReference{
 							Name: server.Name,
 						},
@@ -510,8 +510,8 @@ var _ = Describe("ZomboidBackupPlan Controller", func() {
 		When("using an S3 destination", func() {
 			var (
 				s3BackupPlanName types.NamespacedName
-				s3Destination    *hordehostv1.BackupDestination
-				s3BackupPlan     *hordehostv1.ZomboidBackupPlan
+				s3Destination    *zomboidhostv1.BackupDestination
+				s3BackupPlan     *zomboidhostv1.ZomboidBackupPlan
 				s3Secret         *corev1.Secret
 				container        corev1.Container
 			)
@@ -534,13 +534,13 @@ var _ = Describe("ZomboidBackupPlan Controller", func() {
 				}
 				Expect(k8sClient.Create(ctx, s3Secret)).To(Succeed())
 
-				s3Destination = &hordehostv1.BackupDestination{
+				s3Destination = &zomboidhostv1.BackupDestination{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "s3-destination",
 						Namespace: namespace,
 					},
-					Spec: hordehostv1.BackupDestinationSpec{
-						S3: &hordehostv1.S3{
+					Spec: zomboidhostv1.BackupDestinationSpec{
+						S3: &zomboidhostv1.S3{
 							Provider:   "Minio",
 							BucketName: "test-bucket",
 							Path:       "backups/test",
@@ -564,12 +564,12 @@ var _ = Describe("ZomboidBackupPlan Controller", func() {
 				}
 				Expect(k8sClient.Create(ctx, s3Destination)).To(Succeed())
 
-				s3BackupPlan = &hordehostv1.ZomboidBackupPlan{
+				s3BackupPlan = &zomboidhostv1.ZomboidBackupPlan{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      s3BackupPlanName.Name,
 						Namespace: s3BackupPlanName.Namespace,
 					},
-					Spec: hordehostv1.ZomboidBackupPlanSpec{
+					Spec: zomboidhostv1.ZomboidBackupPlanSpec{
 						Server: corev1.LocalObjectReference{
 							Name: server.Name,
 						},
@@ -663,8 +663,8 @@ var _ = Describe("ZomboidBackupPlan Controller", func() {
 		When("using a Google Drive destination", func() {
 			var (
 				googleDriveBackupPlanName types.NamespacedName
-				googleDriveDestination    *hordehostv1.BackupDestination
-				googleDriveBackupPlan     *hordehostv1.ZomboidBackupPlan
+				googleDriveDestination    *zomboidhostv1.BackupDestination
+				googleDriveBackupPlan     *zomboidhostv1.ZomboidBackupPlan
 				googleDriveSecret         *corev1.Secret
 				googleDriveAppSecret      *corev1.Secret
 				container                 corev1.Container
@@ -700,13 +700,13 @@ var _ = Describe("ZomboidBackupPlan Controller", func() {
 				}
 				Expect(k8sClient.Create(ctx, googleDriveSecret)).To(Succeed())
 
-				googleDriveDestination = &hordehostv1.BackupDestination{
+				googleDriveDestination = &zomboidhostv1.BackupDestination{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "googledrive-destination",
 						Namespace: namespace,
 					},
-					Spec: hordehostv1.BackupDestinationSpec{
-						GoogleDrive: &hordehostv1.GoogleDrive{
+					Spec: zomboidhostv1.BackupDestinationSpec{
+						GoogleDrive: &zomboidhostv1.GoogleDrive{
 							Token: corev1.SecretKeySelector{
 								LocalObjectReference: corev1.LocalObjectReference{
 									Name: googleDriveSecret.Name,
@@ -721,12 +721,12 @@ var _ = Describe("ZomboidBackupPlan Controller", func() {
 				}
 				Expect(k8sClient.Create(ctx, googleDriveDestination)).To(Succeed())
 
-				googleDriveBackupPlan = &hordehostv1.ZomboidBackupPlan{
+				googleDriveBackupPlan = &zomboidhostv1.ZomboidBackupPlan{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      googleDriveBackupPlanName.Name,
 						Namespace: googleDriveBackupPlanName.Namespace,
 					},
-					Spec: hordehostv1.ZomboidBackupPlanSpec{
+					Spec: zomboidhostv1.ZomboidBackupPlanSpec{
 						Server: corev1.LocalObjectReference{
 							Name: server.Name,
 						},

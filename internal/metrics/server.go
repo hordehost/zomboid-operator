@@ -8,10 +8,10 @@ import (
 	"time"
 
 	"github.com/gorcon/rcon"
-	"github.com/hordehost/zomboid-operator/internal/players"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/zomboidhost/zomboid-operator/internal/players"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 

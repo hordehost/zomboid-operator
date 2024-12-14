@@ -18,7 +18,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	zomboidv1 "github.com/hordehost/zomboid-operator/api/v1"
+	zomboidv1 "github.com/zomboidhost/zomboid-operator/api/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 )
 
@@ -352,7 +352,7 @@ var _ = Describe("ZomboidServer Controller", func() {
 
 						backupSetOwner := initContainers[4]
 						Expect(backupSetOwner.Name).To(Equal("backup-set-owner"))
-						Expect(backupSetOwner.Image).To(Equal("hordehost/zomboid-server:" + zomboidServer.Spec.Version))
+						Expect(backupSetOwner.Image).To(Equal("zomboidhost/zomboid-server:" + zomboidServer.Spec.Version))
 						Expect(backupSetOwner.Command).To(Equal([]string{"/usr/bin/chown", "-R", "1000:1000", "/game-data/backups"}))
 						Expect(backupSetOwner.SecurityContext.RunAsUser).To(Equal(ptr.To(int64(0))))
 						Expect(backupSetOwner.VolumeMounts).To(ConsistOf(corev1.VolumeMount{
@@ -362,7 +362,7 @@ var _ = Describe("ZomboidServer Controller", func() {
 
 						backupSetPermissions := initContainers[5]
 						Expect(backupSetPermissions.Name).To(Equal("backup-set-permissions"))
-						Expect(backupSetPermissions.Image).To(Equal("hordehost/zomboid-server:" + zomboidServer.Spec.Version))
+						Expect(backupSetPermissions.Image).To(Equal("zomboidhost/zomboid-server:" + zomboidServer.Spec.Version))
 						Expect(backupSetPermissions.Command).To(Equal([]string{"/usr/bin/chmod", "-R", "755", "/game-data/backups"}))
 						Expect(backupSetPermissions.SecurityContext.RunAsUser).To(Equal(ptr.To(int64(0))))
 						Expect(backupSetPermissions.VolumeMounts).To(ConsistOf(corev1.VolumeMount{
@@ -505,7 +505,7 @@ var _ = Describe("ZomboidServer Controller", func() {
 
 				It("should use the operator image", func() {
 					// See suite_test.go for where this is set
-					Expect(container.Image).To(Equal("hordehost/zomboid-operator:a-really-real-version"))
+					Expect(container.Image).To(Equal("zomboidhost/zomboid-operator:a-really-real-version"))
 				})
 
 				It("should set the correct command", func() {
@@ -729,7 +729,7 @@ var _ = Describe("ZomboidServer Controller", func() {
 				Expect(k8sClient.Get(ctx, zomboidServerName, deployment)).To(Succeed())
 
 				container := deployment.Spec.Template.Spec.Containers[0]
-				Expect(container.Image).To(Equal("hordehost/zomboid-server:41.78.17"))
+				Expect(container.Image).To(Equal("zomboidhost/zomboid-server:41.78.17"))
 			})
 
 			It("should set JVM memory to 95% of container memory limit", func() {

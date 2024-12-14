@@ -25,9 +25,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/gorcon/rcon"
-	zomboidv1 "github.com/hordehost/zomboid-operator/api/v1"
-	"github.com/hordehost/zomboid-operator/internal/players"
-	"github.com/hordehost/zomboid-operator/internal/settings"
+	zomboidv1 "github.com/zomboidhost/zomboid-operator/api/v1"
+	"github.com/zomboidhost/zomboid-operator/internal/players"
+	"github.com/zomboidhost/zomboid-operator/internal/settings"
 )
 
 // ZomboidServerReconciler reconciles a ZomboidServer object

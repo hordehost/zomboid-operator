@@ -1,5 +1,5 @@
 # Image URL to use all building/pushing image targets
-IMG ?= hordehost/zomboid-operator:latest
+IMG ?= zomboidhost/zomboid-operator:latest
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 ENVTEST_K8S_VERSION = 1.31.0
 
@@ -76,7 +76,7 @@ build: tidy manifests generate fmt vet ## Build manager binary.
 
 .PHONY: run
 run: build manifests generate fmt vet ## Run a controller from your host.
-	OPERATOR_IMAGE=hordehost/zomboid-operator:latest go run ./cmd/main.go
+	OPERATOR_IMAGE=zomboidhost/zomboid-operator:latest go run ./cmd/main.go
 
 .PHONY: tidy
 tidy:

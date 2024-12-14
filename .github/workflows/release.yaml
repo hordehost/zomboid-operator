@@ -31,7 +31,7 @@ jobs:
           cache: true
 
       - env:
-          IMG: hordehost/zomboid-operator:${{ github.ref_name }}
+          IMG: zomboidhost/zomboid-operator:${{ github.ref_name }}
         run: make build-installer
 
       - uses: actions/upload-release-asset@v1

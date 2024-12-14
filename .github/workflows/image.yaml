@@ -39,7 +39,7 @@ jobs:
 
       - uses: docker/login-action@v3
         with:
-          username: hordehost
+          username: zomboidhost
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - uses: docker/setup-buildx-action@v3
@@ -47,7 +47,7 @@ jobs:
       - uses: docker/build-push-action@v5
         with:
           context: .
-          cache-from: type=registry,ref=hordehost/zomboid-operator:buildcache
-          cache-to: type=registry,ref=hordehost/zomboid-operator:buildcache,mode=max
+          cache-from: type=registry,ref=zomboidhost/zomboid-operator:buildcache
+          cache-to: type=registry,ref=zomboidhost/zomboid-operator:buildcache,mode=max
           push: ${{ inputs.push || false }}
-          tags: ${{ inputs.push && format('hordehost/zomboid-operator:latest,hordehost/zomboid-operator:{0}', inputs.version) || '' }}
+          tags: ${{ inputs.push && format('zomboidhost/zomboid-operator:latest,zomboidhost/zomboid-operator:{0}', inputs.version) || '' }}

@@ -1,7 +1,7 @@
 package settings
 
 import (
-	zomboidv1 "github.com/hordehost/zomboid-operator/api/v1"
+	zomboidv1 "github.com/zomboidhost/zomboid-operator/api/v1"
 	"k8s.io/utils/ptr"
 
 	. "github.com/onsi/ginkgo/v2"

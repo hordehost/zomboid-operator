@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"os"
 
-	zomboidv1 "github.com/hordehost/zomboid-operator/api/v1"
+	zomboidv1 "github.com/zomboidhost/zomboid-operator/api/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	errors "k8s.io/apimachinery/pkg/api/errors"
@@ -370,7 +370,7 @@ func (r *ZomboidServerReconciler) reconcileDeployment(ctx context.Context, zombo
 			}
 		}
 
-		image := fmt.Sprintf("hordehost/zomboid-server:%s", zomboidServer.Spec.Version)
+		image := fmt.Sprintf("zomboidhost/zomboid-server:%s", zomboidServer.Spec.Version)
 
 		var workshopVolumeSource corev1.VolumeSource
 		if zomboidServer.Spec.Storage.WorkshopRequest != nil {
