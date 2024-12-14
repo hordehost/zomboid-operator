@@ -7,21 +7,21 @@ metadata:
     app.kubernetes.io/managed-by: kustomize
   name: backupdestination-editor-role
 rules:
-- apiGroups:
-  - horde.host
-  resources:
-  - backupdestinations
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - horde.host
-  resources:
-  - backupdestinations/status
-  verbs:
-  - get
+  - apiGroups:
+      - zomboid.host
+    resources:
+      - backupdestinations
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - zomboid.host
+    resources:
+      - backupdestinations/status
+    verbs:
+      - get

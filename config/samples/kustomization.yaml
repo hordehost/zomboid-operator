@@ -1,6 +1,6 @@
 ## Append samples of your project ##
 resources:
-  - horde.host_v1_zomboidserver.yaml
+  - zomboid.host_v1_zomboidserver.yaml
   - zomboid_v1_zomboidserver.yaml
 - v1_backupdestination.yaml
 - v1_ZomboidBackupPlan.yaml

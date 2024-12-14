@@ -8,7 +8,7 @@ metadata:
   name: ZomboidBackupPlan-viewer-role
 rules:
   - apiGroups:
-      - horde.host
+      - zomboid.host
     resources:
       - zomboidbackupplans
     verbs:
@@ -16,7 +16,7 @@ rules:
       - list
       - watch
   - apiGroups:
-      - horde.host
+      - zomboid.host
     resources:
       - zomboidbackupplans/status
     verbs:

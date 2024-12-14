@@ -2,7 +2,7 @@
 # This file is used to track the info used to scaffold your project
 # and allow the plugins properly work.
 # More info: https://book.kubebuilder.io/reference/project-config.html
-domain: horde.host
+domain: zomboid.host
 layout:
   - go.kubebuilder.io/v4
 projectName: zomboid-operator
@@ -11,7 +11,7 @@ resources:
   - api:
       crdVersion: v1
       namespaced: true
-    domain: horde.host
+    domain: zomboid.host
     kind: BackupDestination
     path: github.com/zomboidhost/zomboid-operator/api/v1
     version: v1
@@ -19,7 +19,7 @@ resources:
       crdVersion: v1
       namespaced: true
     controller: true
-    domain: horde.host
+    domain: zomboid.host
     kind: ZomboidServer
     path: github.com/zomboidhost/zomboid-operator/api/v1
     version: v1
@@ -27,7 +27,7 @@ resources:
       crdVersion: v1
       namespaced: true
     controller: true
-    domain: horde.host
+    domain: zomboid.host
     kind: ZomboidBackupPlan
     path: github.com/zomboidhost/zomboid-operator/api/v1
     version: v1

@@ -17,7 +17,7 @@ stringData:
   channel: "zomboid"
   channel-id: "1234567890"
 ---
-apiVersion: horde.host/v1
+apiVersion: zomboid.host/v1
 kind: ZomboidServer
 metadata:
   name: zomboidserver-with-all-settings

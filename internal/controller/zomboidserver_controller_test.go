@@ -39,7 +39,7 @@ var _ = Describe("ZomboidServer Controller", func() {
 	It("should have the CRD available", func() {
 		crd := &apiextensionsv1.CustomResourceDefinition{}
 		Expect(k8sClient.Get(ctx, types.NamespacedName{
-			Name: "zomboidservers.horde.host",
+			Name: "zomboidservers.zomboid.host",
 		}, crd)).To(Succeed())
 
 		Expect(crd.Spec.Names.Kind).To(Equal("ZomboidServer"))

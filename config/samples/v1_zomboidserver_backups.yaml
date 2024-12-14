@@ -7,7 +7,7 @@ stringData:
   admin-password: "tread with care"
   server-password: "let me in"
 ---
-apiVersion: horde.host/v1
+apiVersion: zomboid.host/v1
 kind: ZomboidServer
 metadata:
   name: zomboidserver-with-backups
@@ -115,7 +115,7 @@ spec:
   selector:
     app: minio
 ---
-apiVersion: horde.host/v1
+apiVersion: zomboid.host/v1
 kind: BackupDestination
 metadata:
   name: s3-destination
@@ -131,7 +131,7 @@ spec:
       name: minio-credentials
       key: secret-key
 ---
-apiVersion: horde.host/v1
+apiVersion: zomboid.host/v1
 kind: ZomboidBackupPlan
 metadata:
   name: backup-my-server-to-s3
@@ -145,7 +145,7 @@ spec:
 #
 # Dropbox
 #
-apiVersion: horde.host/v1
+apiVersion: zomboid.host/v1
 kind: BackupDestination
 metadata:
   name: dropbox-destination
@@ -156,7 +156,7 @@ spec:
       name: dropbox-token
       key: token
 ---
-apiVersion: horde.host/v1
+apiVersion: zomboid.host/v1
 kind: ZomboidBackupPlan
 metadata:
   name: backup-my-server-to-dropbox
@@ -170,7 +170,7 @@ spec:
 #
 # Google Drive
 #
-apiVersion: horde.host/v1
+apiVersion: zomboid.host/v1
 kind: BackupDestination
 metadata:
   name: googledrive-destination
@@ -181,7 +181,7 @@ spec:
       name: googledrive-token
       key: token
 ---
-apiVersion: horde.host/v1
+apiVersion: zomboid.host/v1
 kind: ZomboidBackupPlan
 metadata:
   name: backup-my-server-to-googledrive

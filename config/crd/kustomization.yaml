@@ -2,9 +2,9 @@
 # since it depends on service name and namespace that are out of this kustomize package.
 # It should be run by config/default
 resources:
-  - bases/horde.host_backupdestinations.yaml
-  - bases/horde.host_zomboidservers.yaml
-  - bases/horde.host_zomboidbackupplans.yaml
+  - bases/zomboid.host_backupdestinations.yaml
+  - bases/zomboid.host_zomboidservers.yaml
+  - bases/zomboid.host_zomboidbackupplans.yaml
 # +kubebuilder:scaffold:crdkustomizeresource
 
 patches:
