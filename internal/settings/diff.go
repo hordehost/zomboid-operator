@@ -3,7 +3,7 @@ package settings
 import (
 	"reflect"
 
-	zomboidv1 "github.com/hordehost/zomboid-operator/api/v1"
+	zomboidv1 "github.com/zomboidhost/zomboid-operator/api/v1"
 )
 
 // SettingsDiff compares current and desired settings, returning a list of settings that need to be updated

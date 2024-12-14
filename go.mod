@@ -1,4 +1,4 @@
-module github.com/hordehost/zomboid-operator
+module github.com/zomboidhost/zomboid-operator
 
 go 1.22.0
 

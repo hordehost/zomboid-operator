@@ -1,9 +1,9 @@
 package settings
 
 import (
-	zomboidv1 "github.com/hordehost/zomboid-operator/api/v1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	zomboidv1 "github.com/zomboidhost/zomboid-operator/api/v1"
 )
 
 const sampleRCONOutput = `

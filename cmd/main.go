@@ -20,11 +20,11 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
-	hordehostv1 "github.com/hordehost/zomboid-operator/api/v1"
-	zomboidhordehostv1 "github.com/hordehost/zomboid-operator/api/v1"
-	zomboidv1 "github.com/hordehost/zomboid-operator/api/v1"
-	"github.com/hordehost/zomboid-operator/internal/controller"
-	"github.com/hordehost/zomboid-operator/internal/metrics"
+	zomboidhostv1 "github.com/zomboidhost/zomboid-operator/api/v1"
+	zomboidv1 "github.com/zomboidhost/zomboid-operator/api/v1"
+	zomboidzomboidhostv1 "github.com/zomboidhost/zomboid-operator/api/v1"
+	"github.com/zomboidhost/zomboid-operator/internal/controller"
+	"github.com/zomboidhost/zomboid-operator/internal/metrics"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -36,9 +36,9 @@ var (
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
-	utilruntime.Must(zomboidhordehostv1.AddToScheme(scheme))
+	utilruntime.Must(zomboidzomboidhostv1.AddToScheme(scheme))
 	utilruntime.Must(zomboidv1.AddToScheme(scheme))
-	utilruntime.Must(hordehostv1.AddToScheme(scheme))
+	utilruntime.Must(zomboidhostv1.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
 }
 
